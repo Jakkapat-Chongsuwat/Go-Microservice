@@ -20,5 +20,9 @@
 # Go workspace file
 go.work
 
-# env file
+# Ignore all files ending with .env
 *.env
+.env.*
+
+# Except template.env
+!template.env
