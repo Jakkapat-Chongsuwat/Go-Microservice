@@ -1,0 +1,21 @@
+// user-service\proto\helloworld\user_service.proto
+
+syntax = "proto3";
+
+package user_service;
+
+option go_package = "user_service/proto/user_service;user_service";
+
+service UserService {
+  rpc GetUserByID(GetUserRequest) returns (GetUserResponse) {}
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message GetUserResponse {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+}

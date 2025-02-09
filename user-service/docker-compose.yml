@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: user_service_db
+    environment:
+      POSTGRES_USER: devuser
+      POSTGRES_PASSWORD: devpass
+      POSTGRES_DB: user_service
+    expose:
+      - "5555"
+    ports:
+      - "5555:5555"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    command: -p 5555
+
+volumes:
+  postgres_data:
