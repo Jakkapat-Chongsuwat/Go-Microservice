@@ -1,17 +1,16 @@
-// order-service/internal/domain/order.go
-
 package domain
 
+type OrderStatus string
+
 const (
-	OrderStatusCreated = "CREATED"
-	OrderStatusPaid    = "PAID"
-	OrderStatusShipped = "SHIPPED"
+	OrderStatusCreated OrderStatus = "CREATED"
+	OrderStatusPaid    OrderStatus = "PAID"
+	OrderStatusShipped OrderStatus = "SHIPPED"
 )
 
 type Order struct {
-	ID        string
-	UserID    string
-	ProductID string
-	Quantity  int
-	Status    string
+	ID     string
+	UserID string
+	Status OrderStatus
+	Items  []*OrderItem
 }

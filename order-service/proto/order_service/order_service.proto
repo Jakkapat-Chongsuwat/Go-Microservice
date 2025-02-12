@@ -12,15 +12,19 @@ service OrderService {
 
 message CreateOrderRequest {
     string user_id = 1;
-    string product_id = 2;
-    int32 quantity = 3;
+    repeated OrderItem items = 2;
 }
 
 message CreateOrderResponse {
     string orderId = 1;
     string userId = 2;
-    string productID = 3;
-    string status = 4;
+    string status = 3;
+    repeated OrderItem items = 4; 
+}
+
+message OrderItem {
+    string productId = 1;
+    int32 quantity = 2;
 }
 
 message GetOrderRequest {
@@ -36,13 +40,12 @@ message GetOrdersByUserIDRequest {
 }
 
 message GetOrdersByUserIDResponse {
-    repeated Order orders = 1; 
+    repeated Order orders = 1;
 }
 
 message Order {
     string orderId = 1;
     string userId = 2;
-    string productID = 3;
-    int32 quantity = 4;
-    string status = 5;
+    string status = 3;
+    repeated OrderItem items = 4;  
 }
