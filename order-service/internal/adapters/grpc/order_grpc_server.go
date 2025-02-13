@@ -25,17 +25,15 @@ func NewOrderGRPCServer(orderUC usecases.OrderUseCase, logger *zap.Logger) *Orde
 func (s *OrderGRPCServer) CreateOrder(ctx context.Context, req *order_service.CreateOrderRequest) (*order_service.CreateOrderResponse, error) {
 	s.logger.Info("Received CreateOrder request", zap.String("userID", req.UserId))
 
-	dOrder := &domain.Order{
-		UserID: req.UserId,
-	}
+	dOrder := domain.NewOrder(req.UserId)
 
 	dItems := make([]*domain.OrderItem, 0, len(req.Items))
 	for _, it := range req.Items {
-		dItems = append(dItems, &domain.OrderItem{
-			ProductID: it.ProductId,
-			Quantity:  int(it.Quantity),
-		})
+		dItem := domain.NewOrderItem(it.ProductId, int(it.Quantity))
+		dItems = append(dItems, dItem)
 	}
+
+	dOrder.Items = dItems
 
 	createdOrder, err := s.orderUseCase.CreateOrderWithItems(ctx, dOrder, dItems)
 	if err != nil {

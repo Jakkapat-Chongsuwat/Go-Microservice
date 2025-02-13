@@ -8,7 +8,7 @@ import (
 	"order-service/internal/adapters/models"
 	"order-service/internal/domain"
 	"order-service/internal/usecases"
-	"sync"
+	"time"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -30,62 +30,36 @@ func NewGormOrderRepo(db *gorm.DB, logger *zap.Logger) *GormOrderRepository {
 	}
 }
 
-func (r *GormOrderRepository) CreateOrder(ctx context.Context, order *domain.Order) (*domain.Order, error) {
-	dbOrder := r.mapper.DomainToGorm(*order)
-
-	if err := r.db.WithContext(ctx).Create(&dbOrder).Error; err != nil {
-		r.logger.Error("failed to create order", zap.String("orderID", order.ID), zap.Error(err))
-		return nil, fmt.Errorf("failed to create order: %w", err)
-	}
-
-	r.logger.Info("created order", zap.String("orderID", order.ID))
-	return order, nil
-}
-
 func (r *GormOrderRepository) CreateOrderWithItems(ctx context.Context, order *domain.Order, items []*domain.OrderItem) (*domain.Order, error) {
-	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		dbOrder := r.mapper.DomainToGorm(*order)
-		if err := tx.Create(&dbOrder).Error; err != nil {
-			r.logger.Error("failed to create order in transaction", zap.Error(err))
-			return err
-		}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
-		var (
-			wg       sync.WaitGroup
-			mu       sync.Mutex
-			firstErr error
-		)
-		wg.Add(len(items))
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Convert domain order to GORM order
+		dbOrder := r.mapper.DomainToGorm(*order)
+
+		// Omit the "Items" association to prevent auto-insertion
+		if err := tx.Omit("Items").Create(&dbOrder).Error; err != nil {
+			r.logger.Error("failed to create order in transaction", zap.Error(err))
+			return fmt.Errorf("failed to insert order: %w", err)
+		}
 
 		for _, it := range items {
-			localItem := it
-			go func() {
-				defer wg.Done()
-				dbItem := r.mapper.DomainToGormOrderItem(*localItem)
-				dbItem.OrderID = dbOrder.ID
-				if err2 := tx.Create(&dbItem).Error; err2 != nil {
-					mu.Lock()
-					defer mu.Unlock()
-					if firstErr == nil {
-						firstErr = err2
-					}
-				}
-			}()
+			dbItem := r.mapper.DomainToGormOrderItem(*it)
+			dbItem.OrderID = dbOrder.ID
+			if err := tx.Create(&dbItem).Error; err != nil {
+				r.logger.Error("failed to insert order item", zap.Error(err), zap.Any("orderItem", dbItem))
+				return fmt.Errorf("failed to insert order item: %w", err)
+			}
 		}
-
-		wg.Wait()
-		if firstErr != nil {
-			r.logger.Error("failed to insert order item", zap.Error(firstErr))
-			return firstErr
-		}
-
 		return nil
 	})
 	if err != nil {
+		r.logger.Error("Transaction failed", zap.Error(err))
 		return nil, fmt.Errorf("transaction failed: %w", err)
 	}
 
-	r.logger.Info("Created order with items in one transaction", zap.String("orderID", order.ID))
+	r.logger.Info("Transaction successful", zap.String("orderID", order.ID))
 	return order, nil
 }
 

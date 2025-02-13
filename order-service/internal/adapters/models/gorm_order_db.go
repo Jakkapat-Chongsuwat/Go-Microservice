@@ -7,7 +7,7 @@ import (
 )
 
 type GormDBOrder struct {
-	ID        string             `gorm:"column:id;primaryKey"`
+	ID        string             `gorm:"column:id;primaryKey;type:uuid"`
 	UserID    string             `gorm:"column:user_id"`
 	Status    string             `gorm:"column:status"`
 	Items     []*GormDBOrderItem `gorm:"foreignKey:OrderID"`
@@ -17,8 +17,8 @@ type GormDBOrder struct {
 }
 
 type GormDBOrderItem struct {
-	ID        string         `gorm:"primaryKey"`
-	OrderID   string         `gorm:"column:order_id;index"`
+	ID        string         `gorm:"column:id;primaryKey;type:uuid"`
+	OrderID   string         `gorm:"column:order_id;index;type:uuid"`
 	ProductID string         `gorm:"column:product_id"`
 	Quantity  int            `gorm:"column:quantity"`
 	CreatedAt time.Time      `gorm:"column:created_at"`

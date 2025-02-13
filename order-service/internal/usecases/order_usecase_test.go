@@ -11,6 +11,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// --- Mock Implementations ---
+
 type MockOrderRepository struct {
 	mock.Mock
 }
@@ -66,7 +68,9 @@ func (m *MockProductServiceClient) VerifyProduct(ctx context.Context, productID 
 }
 
 func TestOrderUseCase(t *testing.T) {
-	t.Run("CreateOrder", func(t *testing.T) {
+
+	t.Run("CreateOrderWithItems", func(t *testing.T) {
+
 		t.Run("Success", func(t *testing.T) {
 			mockRepo := new(MockOrderRepository)
 			mockUserSvc := new(MockUserServiceClient)
@@ -84,12 +88,15 @@ func TestOrderUseCase(t *testing.T) {
 					},
 				},
 			}
+
 			expectedOrder := &domain.Order{
 				ID:     "order_123",
 				UserID: "user123",
 				Status: domain.OrderStatusCreated,
 				Items: []*domain.OrderItem{
 					{
+						ID:        "item_123",
+						OrderID:   "order_123",
 						ProductID: "prodABC",
 						Quantity:  2,
 					},
@@ -98,19 +105,39 @@ func TestOrderUseCase(t *testing.T) {
 
 			mockUserSvc.On("VerifyUser", mock.Anything, inputOrder.UserID).Return(nil).Once()
 			mockProdSvc.On("VerifyProduct", mock.Anything, "prodABC").Return(nil).Once()
-			mockRepo.On("CreateOrder", mock.Anything, mock.MatchedBy(func(o *domain.Order) bool {
-				return o.UserID == "user123" && len(o.Items) == 1 && o.Items[0].ProductID == "prodABC"
-			})).Return(expectedOrder, nil).Once()
+			mockRepo.On("CreateOrderWithItems", mock.Anything,
+				mock.MatchedBy(func(o *domain.Order) bool {
+					if o.UserID != "user123" || o.Status != domain.OrderStatusCreated || o.ID == "" {
+						return false
+					}
+					if len(o.Items) != 1 {
+						return false
+					}
+					item := o.Items[0]
+					if item.ProductID != "prodABC" || item.Quantity != 2 {
+						return false
+					}
+					if item.ID == "" || item.OrderID != o.ID {
+						return false
+					}
+					return true
+				}),
+				mock.Anything).Return(expectedOrder, nil).Once()
 
 			ctx := context.Background()
-			result, err := orderUC.CreateOrder(ctx, inputOrder)
+			result, err := orderUC.CreateOrderWithItems(ctx, inputOrder, inputOrder.Items)
 			assert.NoError(t, err)
 			assert.NotNil(t, result)
-			assert.Equal(t, expectedOrder, result)
+			assert.Equal(t, expectedOrder.UserID, result.UserID)
+			assert.Equal(t, expectedOrder.Status, result.Status)
+			assert.Equal(t, expectedOrder.ID, result.ID)
+			assert.Len(t, result.Items, 1)
+			assert.Equal(t, "prodABC", result.Items[0].ProductID)
+			assert.Equal(t, 2, result.Items[0].Quantity)
 
 			mockUserSvc.AssertExpectations(t)
-			mockRepo.AssertExpectations(t)
 			mockProdSvc.AssertExpectations(t)
+			mockRepo.AssertExpectations(t)
 		})
 
 		t.Run("VerifyUserFail", func(t *testing.T) {
@@ -131,11 +158,10 @@ func TestOrderUseCase(t *testing.T) {
 			}
 
 			mockUserSvc.On("VerifyUser", mock.Anything, "userX").
-				Return(errors.New("user not found")).
-				Once()
+				Return(errors.New("user not found")).Once()
 
 			ctx := context.Background()
-			result, err := orderUC.CreateOrder(ctx, inputOrder)
+			result, err := orderUC.CreateOrderWithItems(ctx, inputOrder, inputOrder.Items)
 			assert.Error(t, err)
 			assert.Nil(t, result)
 			assert.Contains(t, err.Error(), "failed to verify user")
@@ -163,13 +189,14 @@ func TestOrderUseCase(t *testing.T) {
 
 			mockUserSvc.On("VerifyUser", mock.Anything, "userX").Return(nil).Once()
 			mockProdSvc.On("VerifyProduct", mock.Anything, "prodY").Return(nil).Once()
-			mockRepo.On("CreateOrder", mock.Anything, mock.Anything).Return(nil, errors.New("db error")).Once()
+			mockRepo.On("CreateOrderWithItems", mock.Anything, mock.Anything, mock.Anything).
+				Return(nil, errors.New("db error")).Once()
 
 			ctx := context.Background()
-			result, err := orderUC.CreateOrder(ctx, inputOrder)
+			result, err := orderUC.CreateOrderWithItems(ctx, inputOrder, inputOrder.Items)
 			assert.Error(t, err)
 			assert.Nil(t, result)
-			assert.Contains(t, err.Error(), "failed to create order")
+			assert.Contains(t, err.Error(), "failed to create order with items")
 			mockUserSvc.AssertExpectations(t)
 			mockRepo.AssertExpectations(t)
 			mockProdSvc.AssertExpectations(t)
@@ -283,7 +310,7 @@ func TestOrderUseCase(t *testing.T) {
 			result, err := orderUC.GetOrdersInParallel(ctx, orderIDs)
 			assert.NoError(t, err)
 			assert.Len(t, result, 2)
-			assert.Equal(t, orders, result)
+			assert.ElementsMatch(t, orders, result)
 			mockRepo.AssertExpectations(t)
 		})
 

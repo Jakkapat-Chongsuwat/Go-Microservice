@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="15" failures="1" errors="0" time="157.020289">
+	<testsuite tests="0" failures="0" time="0.038000" name="order-service/cmd/server" timestamp="2025-02-13T02:15:35+07:00">
+		<properties>
+			<property name="go.version" value="go1.22.4 windows/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="order-service/internal/adapters/columns" timestamp="2025-02-13T02:15:35+07:00">
+		<properties>
+			<property name="go.version" value="go1.22.4 windows/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.038000" name="order-service/internal/adapters/grpc" timestamp="2025-02-13T02:15:35+07:00">
+		<properties>
+			<property name="go.version" value="go1.22.4 windows/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.031000" name="order-service/internal/adapters/mappers" timestamp="2025-02-13T02:15:35+07:00">
+		<properties>
+			<property name="go.version" value="go1.22.4 windows/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.038000" name="order-service/internal/adapters/mappers_gen" timestamp="2025-02-13T02:15:35+07:00">
+		<properties>
+			<property name="go.version" value="go1.22.4 windows/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.028000" name="order-service/internal/adapters/models" timestamp="2025-02-13T02:15:35+07:00">
+		<properties>
+			<property name="go.version" value="go1.22.4 windows/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="1" failures="1" time="154.431000" name="order-service/internal/adapters/repository" timestamp="2025-02-13T02:15:35+07:00">
+		<properties>
+			<property name="go.version" value="go1.22.4 windows/amd64"></property>
+		</properties>
+		<testcase classname="order-service/internal/adapters/repository" name="TestGormOrderRepository" time="-0.000000">
+			<failure message="Failed" type="">=== RUN   TestGormOrderRepository&#xA;</failure>
+		</testcase>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="order-service/internal/domain" timestamp="2025-02-13T02:15:35+07:00">
+		<properties>
+			<property name="go.version" value="go1.22.4 windows/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="14" failures="0" time="1.262000" name="order-service/internal/usecases" timestamp="2025-02-13T02:15:35+07:00">
+		<properties>
+			<property name="go.version" value="go1.22.4 windows/amd64"></property>
+		</properties>
+		<testcase classname="order-service/internal/usecases" name="TestOrderUseCase/CreateOrderWithItems/Success" time="0.000000"></testcase>
+		<testcase classname="order-service/internal/usecases" name="TestOrderUseCase/CreateOrderWithItems/VerifyUserFail" time="0.000000"></testcase>
+		<testcase classname="order-service/internal/usecases" name="TestOrderUseCase/CreateOrderWithItems/RepoCreateFail" time="0.000000"></testcase>
+		<testcase classname="order-service/internal/usecases" name="TestOrderUseCase/CreateOrderWithItems" time="0.000000"></testcase>
+		<testcase classname="order-service/internal/usecases" name="TestOrderUseCase/GetOrder/Success" time="0.000000"></testcase>
+		<testcase classname="order-service/internal/usecases" name="TestOrderUseCase/GetOrder/RepoError" time="0.000000"></testcase>
+		<testcase classname="order-service/internal/usecases" name="TestOrderUseCase/GetOrder" time="0.000000"></testcase>
+		<testcase classname="order-service/internal/usecases" name="TestOrderUseCase/GetOrdersByUserID/Success" time="0.000000"></testcase>
+		<testcase classname="order-service/internal/usecases" name="TestOrderUseCase/GetOrdersByUserID/RepoError" time="0.000000"></testcase>
+		<testcase classname="order-service/internal/usecases" name="TestOrderUseCase/GetOrdersByUserID" time="0.000000"></testcase>
+		<testcase classname="order-service/internal/usecases" name="TestOrderUseCase/GetOrdersInParallel/Success" time="0.000000"></testcase>
+		<testcase classname="order-service/internal/usecases" name="TestOrderUseCase/GetOrdersInParallel/PartialFailure" time="0.000000"></testcase>
+		<testcase classname="order-service/internal/usecases" name="TestOrderUseCase/GetOrdersInParallel" time="0.000000"></testcase>
+		<testcase classname="order-service/internal/usecases" name="TestOrderUseCase" time="0.010000"></testcase>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.031000" name="order-service/proto/order_service" timestamp="2025-02-13T02:15:35+07:00">
+		<properties>
+			<property name="go.version" value="go1.22.4 windows/amd64"></property>
+		</properties>
+	</testsuite>
+</testsuites>

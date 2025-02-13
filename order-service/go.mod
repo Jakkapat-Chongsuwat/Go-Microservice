@@ -4,7 +4,6 @@ go 1.22.4
 
 require (
 	github.com/docker/go-connections v0.5.0
-	github.com/jmattheis/goverter v1.7.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/stretchr/testify v1.10.0
@@ -17,12 +16,7 @@ require (
 	gorm.io/gorm v1.25.12
 )
 
-require (
-	github.com/dave/jennifer v1.6.0 // indirect
-	github.com/go-sql-driver/mysql v1.7.0 // indirect
-	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
-)
+require github.com/go-sql-driver/mysql v1.7.0 // indirect
 
 require (
 	dario.cat/mergo v1.0.0 // indirect

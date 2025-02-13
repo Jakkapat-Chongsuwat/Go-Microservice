@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package order_service;
 
-option go_package = "order_service/proto/order_service;order_service";
+option go_package = "github.com/jakkapat-chongsuwat/go-microservice/proto/order_service;order_service";
 
 service OrderService {
     rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
