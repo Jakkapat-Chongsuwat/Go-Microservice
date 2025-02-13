@@ -10,11 +10,15 @@ require (
 	github.com/testcontainers/testcontainers-go v0.35.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/grpc v1.70.0
-	google.golang.org/protobuf v1.36.5
+	google.golang.org/protobuf v1.36.5 // indirect
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/postgres v1.5.11
 	gorm.io/gorm v1.25.12
 )
+
+require github.com/jakkapat-chongsuwat/go-microservice/proto v0.0.0
+
+replace github.com/jakkapat-chongsuwat/go-microservice/proto => ../proto
 
 require github.com/go-sql-driver/mysql v1.7.0 // indirect
 

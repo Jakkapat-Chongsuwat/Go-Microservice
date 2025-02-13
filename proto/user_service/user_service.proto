@@ -4,7 +4,7 @@ syntax = "proto3";
 
 package user_service;
 
-option go_package = "user_service/proto/user_service;user_service";
+option go_package = "github.com/jakkapat-chongsuwat/go-microservice/proto/user_service;user_service";
 
 service UserService {
   rpc GetUserByID(GetUserRequest) returns (GetUserResponse) {}

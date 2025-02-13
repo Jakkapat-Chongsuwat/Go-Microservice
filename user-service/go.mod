@@ -4,17 +4,20 @@ go 1.22.4
 
 require (
 	github.com/docker/go-connections v0.5.0
+	github.com/jakkapat-chongsuwat/go-microservice/proto v0.0.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.35.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/grpc v1.70.0
-	google.golang.org/protobuf v1.36.4
+	google.golang.org/protobuf v1.36.5
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/postgres v1.5.11
 	gorm.io/gorm v1.25.12
 )
+
+replace github.com/jakkapat-chongsuwat/go-microservice/proto => ../proto
 
 require (
 	dario.cat/mergo v1.0.0 // indirect

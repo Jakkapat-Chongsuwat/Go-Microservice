@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net"
 	"user-service/internal/usecases"
-	"user-service/proto/user_service"
 
+	"github.com/jakkapat-chongsuwat/go-microservice/proto/user_service"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )

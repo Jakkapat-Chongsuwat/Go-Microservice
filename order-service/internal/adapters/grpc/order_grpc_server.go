@@ -4,8 +4,8 @@ import (
 	"context"
 	"order-service/internal/domain"
 	"order-service/internal/usecases"
-	"order-service/proto/order_service"
 
+	"github.com/jakkapat-chongsuwat/go-microservice/proto/order_service"
 	"go.uber.org/zap"
 )
 

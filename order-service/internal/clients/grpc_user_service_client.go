@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"order-service/proto/user_service"
+	"github.com/jakkapat-chongsuwat/go-microservice/proto/user_service"
 
 	"google.golang.org/grpc"
 )
@@ -21,7 +21,7 @@ func NewGRPCUserServiceClient(conn *grpc.ClientConn) *GRPCUserServiceClient {
 
 func (c *GRPCUserServiceClient) VerifyUser(ctx context.Context, userID string) error {
 	req := &user_service.GetUserRequest{Id: userID}
-	resp, err := c.client.GetUserById(ctx, req)
+	resp, err := c.client.GetUserByID(ctx, req)
 	if err != nil {
 		return fmt.Errorf("failed to verify user: %w", err)
 	}
