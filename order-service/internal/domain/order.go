@@ -1,7 +1,5 @@
 package domain
 
-import "github.com/google/uuid"
-
 type OrderStatus string
 
 const (
@@ -19,7 +17,6 @@ type Order struct {
 
 func NewOrder(userID string) *Order {
 	return &Order{
-		ID:     uuid.New().String(),
 		UserID: userID,
 		Status: OrderStatusCreated,
 		Items:  []*OrderItem{},

@@ -7,7 +7,7 @@ import (
 )
 
 type GormDBOrder struct {
-	ID        string             `gorm:"column:id;primaryKey;type:uuid"`
+	ID        string             `gorm:"column:id;primaryKey;type:uuid;default:gen_random_uuid()"`
 	UserID    string             `gorm:"column:user_id"`
 	Status    string             `gorm:"column:status"`
 	Items     []*GormDBOrderItem `gorm:"foreignKey:OrderID"`
@@ -17,7 +17,7 @@ type GormDBOrder struct {
 }
 
 type GormDBOrderItem struct {
-	ID        string         `gorm:"column:id;primaryKey;type:uuid"`
+	ID        string         `gorm:"column:id;primaryKey;type:uuid;default:gen_random_uuid()"`
 	OrderID   string         `gorm:"column:order_id;index;type:uuid"`
 	ProductID string         `gorm:"column:product_id"`
 	Quantity  int            `gorm:"column:quantity"`

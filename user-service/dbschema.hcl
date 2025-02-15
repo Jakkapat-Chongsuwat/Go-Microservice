@@ -1,4 +1,4 @@
-schema "public" {}
+schema "user_service" {}
 
 table "users" {
   schema = schema.public
