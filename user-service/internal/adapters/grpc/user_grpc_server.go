@@ -23,7 +23,7 @@ func NewUserGRPCServer(u usecases.UserUseCase, logger *zap.Logger) *UserGRPcServ
 	}
 }
 
-func (s *UserGRPcServer) GetUserById(ctx context.Context, req *user_service.GetUserRequest) (*user_service.GetUserResponse, error) {
+func (s *UserGRPcServer) GetUserByID(ctx context.Context, req *user_service.GetUserRequest) (*user_service.GetUserResponse, error) {
 	s.logger.Info("Received GetUserById request", zap.String("id", req.Id))
 
 	user, err := s.userUseCase.GetUserInParallel(ctx, []string{req.Id})

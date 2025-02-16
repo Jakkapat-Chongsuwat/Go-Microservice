@@ -26,3 +26,4 @@ go.work
 
 # Except template.env
 !template.env
+*/vendor

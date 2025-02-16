@@ -1,7 +1,7 @@
 schema "user_service" {}
 
 table "users" {
-  schema = schema.public
+  schema = schema.user_service
 
   column "id" {
     type = varchar(255)
@@ -19,14 +19,14 @@ table "users" {
   }
 
   column "created_at" {
-    type = timestamp
-    null = false
+    type    = timestamp
+    null    = false
     default = sql("CURRENT_TIMESTAMP")
   }
 
   column "updated_at" {
-    type = timestamp
-    null = false
+    type    = timestamp
+    null    = false
     default = sql("CURRENT_TIMESTAMP")
   }
 
@@ -41,14 +41,14 @@ table "users" {
 }
 
 function "set_updated_at" {
-  schema = schema.public
+  schema = schema.user_service
   lang   = PLpgSQL
   return = trigger
   as = <<-SQL
-  BEGIN
-    NEW.updated_at := now();
-    RETURN NEW;
-  END;
+    BEGIN
+      NEW.updated_at := now();
+      RETURN NEW;
+    END;
   SQL
 }
 

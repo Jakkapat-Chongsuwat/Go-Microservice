@@ -10,6 +10,7 @@ import (
 	"github.com/jakkapat-chongsuwat/go-microservice/proto/user_service"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func StartGRPCServer(port string, userUseCase usecases.UserUseCase, logger *zap.Logger) error {
@@ -21,6 +22,8 @@ func StartGRPCServer(port string, userUseCase usecases.UserUseCase, logger *zap.
 	grpcServer := grpc.NewServer()
 
 	user_service.RegisterUserServiceServer(grpcServer, NewUserGRPCServer(userUseCase, logger))
+
+	reflection.Register(grpcServer)
 
 	logger.Info("Starting UserService gRPC server", zap.String("port", port))
 	return grpcServer.Serve(lis)
