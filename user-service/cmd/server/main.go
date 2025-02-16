@@ -80,10 +80,11 @@ func connectPostgres(logger *zap.Logger) (*gorm.DB, error) {
 	user := getEnv("DB_USER", "devuser")
 	pass := getEnv("DB_PASS", "devpass")
 	dbname := getEnv("DB_NAME", "user_service")
+	dbschema := getEnv("DB_SCHEMA", "public")
 	sslmode := getEnv("DB_SSLMODE", "disable")
 
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		host, port, user, pass, dbname, sslmode)
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s search_path=%s",
+		host, port, user, pass, dbname, sslmode, dbschema)
 	logger.Info("Connecting to Postgres", zap.String("dsn", dsn))
 
 	return gorm.Open(postgres.Open(dsn), &gorm.Config{})

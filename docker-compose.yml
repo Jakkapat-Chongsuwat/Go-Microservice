@@ -10,6 +10,7 @@ services:
       - DB_USER=devuser
       - DB_PASS=devpass
       - DB_NAME=user_service
+      - DB_SCHEMA=user_service
       - REPO_TYPE=gorm
       - DB_DRIVER=postgres
       - DB_SSLMODE=disable
@@ -28,6 +29,11 @@ services:
     volumes:
       - user_service_data:/var/lib/postgresql/data
     command: -p 5555
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devuser -d user_service"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
 
   order-service:
     build:
@@ -41,6 +47,7 @@ services:
       - DB_PASS=devpass
       - DB_PORT=5556
       - DB_NAME=order_service
+      - DB_SCHEMA=order_service
       - DB_SSLMODE=disable
       - DB_DRIVER=postgres
       - REPO_TYPE=gorm
@@ -61,6 +68,11 @@ services:
     volumes:
       - order_service_data:/var/lib/postgresql/data
     command: -p 5556 -c "shared_preload_libraries=pgcrypto"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devuser -d user_service"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
 
 volumes:
   user_service_data:

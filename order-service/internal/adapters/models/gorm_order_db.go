@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -32,4 +33,18 @@ func (GormDBOrder) TableName() string {
 
 func (GormDBOrderItem) TableName() string {
 	return "order_items"
+}
+
+func (o *GormDBOrder) BeforeCreate(tx *gorm.DB) (err error) {
+	if o.ID == "" {
+		o.ID = uuid.NewString()
+	}
+	return nil
+}
+
+func (oi *GormDBOrderItem) BeforeCreate(tx *gorm.DB) (err error) {
+	if oi.ID == "" {
+		oi.ID = uuid.NewString()
+	}
+	return nil
 }
