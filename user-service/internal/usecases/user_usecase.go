@@ -51,6 +51,7 @@ func (u *UserUseCaseImpl) CreateUser(ctx context.Context, id, username, email st
 	return user, nil
 }
 
+// for testing, batch query can be more efficient
 func (u *UserUseCaseImpl) GetUserInParallel(ctx context.Context, userIDs []string) ([]*domain.User, error) {
 	u.logger.Info("GetUserInParallel called", zap.Int("count", len(userIDs)))
 	var (
@@ -82,6 +83,7 @@ func (u *UserUseCaseImpl) GetUserInParallel(ctx context.Context, userIDs []strin
 	return results, nil
 }
 
+// for testing, batch query can be more efficient
 func (u *UserUseCaseImpl) GetUsersWithConcurrencyLimit(ctx context.Context, userIDs []string, maxWorkers int) ([]*domain.User, error) {
 	u.logger.Info("GetUsersWithConcurrencyLimit called", zap.Int("count", len(userIDs)), zap.Int("maxWorkers", maxWorkers))
 	if maxWorkers <= 0 {
@@ -129,6 +131,7 @@ func (u *UserUseCaseImpl) GetUsersWithConcurrencyLimit(ctx context.Context, user
 	return results, nil
 }
 
+// for testing, batch query can be more efficient
 func (u *UserUseCaseImpl) GetUsersFailFast(ctx context.Context, userIDs []string, maxWorkers int) ([]*domain.User, error) {
 	u.logger.Info("GetUsersFailFast called", zap.Int("count", len(userIDs)), zap.Int("maxWorkers", maxWorkers))
 	ctx, cancel := context.WithCancel(ctx)

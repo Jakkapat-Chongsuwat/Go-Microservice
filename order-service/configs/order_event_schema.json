@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "OrderEvent",
+  "namespace": "com.example.order",
+  "fields": [
+    { "name": "order_id", "type": "string" },
+    { "name": "event_type", "type": "string" },
+    {
+      "name": "timestamp",
+      "type": { "type": "long", "logicalType": "timestamp-millis" }
+    }
+  ]
+}

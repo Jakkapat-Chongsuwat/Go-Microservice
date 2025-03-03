@@ -7,7 +7,7 @@ import (
 	mappersgen "order-service/internal/adapters/mappers_gen"
 	"order-service/internal/adapters/models"
 	"order-service/internal/domain"
-	"order-service/internal/usecases"
+	"order-service/internal/domain/interfaces"
 	"time"
 
 	"go.uber.org/zap"
@@ -20,7 +20,7 @@ type GormOrderRepository struct {
 	mapper *mappersgen.ConverterImpl
 }
 
-var _ usecases.OrderRepository = (*GormOrderRepository)(nil)
+var _ interfaces.IOrderRepository = (*GormOrderRepository)(nil)
 
 func NewGormOrderRepo(db *gorm.DB, logger *zap.Logger) *GormOrderRepository {
 	return &GormOrderRepository{
@@ -35,10 +35,8 @@ func (r *GormOrderRepository) CreateOrderWithItems(ctx context.Context, order *d
 	defer cancel()
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Convert domain order to GORM order
 		dbOrder := r.mapper.DomainToGorm(*order)
 
-		// Omit the "Items" association to prevent auto-insertion
 		if err := tx.Omit("Items").Create(&dbOrder).Error; err != nil {
 			r.logger.Error("failed to create order in transaction", zap.Error(err))
 			return fmt.Errorf("failed to insert order: %w", err)

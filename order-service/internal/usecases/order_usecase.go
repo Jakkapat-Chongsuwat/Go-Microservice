@@ -4,50 +4,44 @@ import (
 	"context"
 	"fmt"
 	"order-service/internal/domain"
+	"order-service/internal/domain/interfaces"
 	"sync"
+	"time"
 
 	"go.uber.org/zap"
 )
-
-type OrderRepository interface {
-	GetOrder(ctx context.Context, orderID string) (*domain.Order, error)
-	GetOrdersByUserID(ctx context.Context, userID string) ([]*domain.Order, error)
-	CreateOrderWithItems(ctx context.Context, order *domain.Order, items []*domain.OrderItem) (*domain.Order, error)
-}
 
 type UserServiceClient interface {
 	VerifyUser(ctx context.Context, userID string) error
 }
 
-type ProductServiceClient interface {
-	VerifyProduct(ctx context.Context, productID string) error
-}
-
-type OrderUseCase interface {
-	GetOrder(ctx context.Context, orderID string) (*domain.Order, error)
-	GetOrdersByUserID(ctx context.Context, userID string) ([]*domain.Order, error)
-	GetOrdersInParallel(ctx context.Context, orderIDs []string) ([]*domain.Order, error)
-	CreateOrderWithItems(ctx context.Context, order *domain.Order, items []*domain.OrderItem) (*domain.Order, error)
+type InventoryServiceClient interface {
+	VerifyInventory(ctx context.Context, productID string, requiredQuantity int) error
 }
 
 type OrderUseCaseImpl struct {
-	orderRepo  OrderRepository
-	userSvc    UserServiceClient
-	productSvc ProductServiceClient
-	logger     *zap.Logger
+	orderRepo          interfaces.IOrderRepository
+	userSvc            UserServiceClient
+	inventorySvc       InventoryServiceClient
+	orderEventProducer interfaces.OrderEventProducer
+	logger             *zap.Logger
 }
 
+var _ interfaces.IOrderUseCase = (*OrderUseCaseImpl)(nil)
+
 func NewOrderUsecase(
-	repo OrderRepository,
+	repo interfaces.IOrderRepository,
 	userClient UserServiceClient,
-	productClient ProductServiceClient,
+	inventoryClient InventoryServiceClient,
+	eventProducer interfaces.OrderEventProducer,
 	logger *zap.Logger,
-) OrderUseCase {
+) interfaces.IOrderUseCase {
 	return &OrderUseCaseImpl{
-		orderRepo:  repo,
-		userSvc:    userClient,
-		productSvc: productClient,
-		logger:     logger,
+		orderRepo:          repo,
+		userSvc:            userClient,
+		inventorySvc:       inventoryClient,
+		orderEventProducer: eventProducer,
+		logger:             logger,
 	}
 }
 
@@ -60,9 +54,9 @@ func (o *OrderUseCaseImpl) CreateOrderWithItems(ctx context.Context, order *doma
 	}
 
 	for _, item := range items {
-		if err := o.productSvc.VerifyProduct(ctx, item.ProductID); err != nil {
-			o.logger.Error("failed to verify product", zap.String("productID", item.ProductID), zap.Error(err))
-			return nil, fmt.Errorf("failed to verify product: %w", err)
+		if err := o.inventorySvc.VerifyInventory(ctx, item.ProductID, item.Quantity); err != nil {
+			o.logger.Error("failed to verify inventory", zap.String("productID", item.ProductID), zap.Error(err))
+			return nil, fmt.Errorf("failed to verify inventory: %w", err)
 		}
 	}
 
@@ -75,6 +69,16 @@ func (o *OrderUseCaseImpl) CreateOrderWithItems(ctx context.Context, order *doma
 	}
 
 	o.logger.Info("order with items created", zap.String("orderID", result.ID))
+
+	event := domain.OrderEvent{
+		OrderID:   result.ID,
+		EventType: "CREATED",
+		Timestamp: time.Now(),
+	}
+	if err := o.orderEventProducer.SendOrderEvent(event); err != nil {
+		o.logger.Error("failed to send order event", zap.Error(err))
+	}
+
 	return result, nil
 }
 

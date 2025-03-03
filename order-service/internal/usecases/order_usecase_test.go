@@ -11,8 +11,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// --- Mock Implementations ---
-
 type MockOrderRepository struct {
 	mock.Mock
 }
@@ -62,8 +60,17 @@ type MockProductServiceClient struct {
 	mock.Mock
 }
 
-func (m *MockProductServiceClient) VerifyProduct(ctx context.Context, productID string) error {
-	args := m.Called(ctx, productID)
+func (m *MockProductServiceClient) VerifyInventory(ctx context.Context, productID string, requiredQuantity int) error {
+	args := m.Called(ctx, productID, requiredQuantity)
+	return args.Error(0)
+}
+
+type MockOrderEventProducer struct {
+	mock.Mock
+}
+
+func (m *MockOrderEventProducer) SendOrderEvent(event domain.OrderEvent) error {
+	args := m.Called(event)
 	return args.Error(0)
 }
 
@@ -74,20 +81,15 @@ func TestOrderUseCase(t *testing.T) {
 		t.Run("Success", func(t *testing.T) {
 			mockRepo := new(MockOrderRepository)
 			mockUserSvc := new(MockUserServiceClient)
-			mockProdSvc := new(MockProductServiceClient)
+			mockInvenSvc := new(MockProductServiceClient)
+			mockEventProducer := new(MockOrderEventProducer)
 			logger, _ := zap.NewDevelopment()
 
-			orderUC := NewOrderUsecase(mockRepo, mockUserSvc, mockProdSvc, logger)
+			mockEventProducer.On("SendOrderEvent", mock.Anything).Return(nil).Maybe()
 
-			inputOrder := &domain.Order{
-				UserID: "user123",
-				Items: []*domain.OrderItem{
-					{
-						ProductID: "prodABC",
-						Quantity:  2,
-					},
-				},
-			}
+			inputOrder := domain.NewOrder("user123")
+			inputItem := domain.NewOrderItem("prodABC", 2)
+			inputOrder.Items = []*domain.OrderItem{inputItem}
 
 			expectedOrder := &domain.Order{
 				ID:     "order_123",
@@ -103,8 +105,8 @@ func TestOrderUseCase(t *testing.T) {
 				},
 			}
 
-			mockUserSvc.On("VerifyUser", mock.Anything, inputOrder.UserID).Return(nil).Once()
-			mockProdSvc.On("VerifyProduct", mock.Anything, "prodABC").Return(nil).Once()
+			mockUserSvc.On("VerifyUser", mock.Anything, "user123").Return(nil).Once()
+			mockInvenSvc.On("VerifyInventory", mock.Anything, "prodABC", 2).Return(nil).Once()
 			mockRepo.On("CreateOrderWithItems", mock.Anything,
 				mock.MatchedBy(func(o *domain.Order) bool {
 					if o.UserID != "user123" || o.Status != domain.OrderStatusCreated || o.ID == "" {
@@ -114,10 +116,7 @@ func TestOrderUseCase(t *testing.T) {
 						return false
 					}
 					item := o.Items[0]
-					if item.ProductID != "prodABC" || item.Quantity != 2 {
-						return false
-					}
-					if item.ID == "" || item.OrderID != o.ID {
+					if item.ProductID != "prodABC" || item.Quantity != 2 || item.ID == "" {
 						return false
 					}
 					return true
@@ -125,7 +124,7 @@ func TestOrderUseCase(t *testing.T) {
 				mock.Anything).Return(expectedOrder, nil).Once()
 
 			ctx := context.Background()
-			result, err := orderUC.CreateOrderWithItems(ctx, inputOrder, inputOrder.Items)
+			result, err := NewOrderUsecase(mockRepo, mockUserSvc, mockInvenSvc, mockEventProducer, logger).CreateOrderWithItems(ctx, inputOrder, inputOrder.Items)
 			assert.NoError(t, err)
 			assert.NotNil(t, result)
 			assert.Equal(t, expectedOrder.UserID, result.UserID)
@@ -136,26 +135,20 @@ func TestOrderUseCase(t *testing.T) {
 			assert.Equal(t, 2, result.Items[0].Quantity)
 
 			mockUserSvc.AssertExpectations(t)
-			mockProdSvc.AssertExpectations(t)
+			mockInvenSvc.AssertExpectations(t)
 			mockRepo.AssertExpectations(t)
 		})
 
 		t.Run("VerifyUserFail", func(t *testing.T) {
 			mockRepo := new(MockOrderRepository)
 			mockUserSvc := new(MockUserServiceClient)
-			mockProdSvc := new(MockProductServiceClient)
+			mockInvenSvc := new(MockProductServiceClient)
+			mockEventProducer := new(MockOrderEventProducer)
 			logger, _ := zap.NewDevelopment()
 
-			orderUC := NewOrderUsecase(mockRepo, mockUserSvc, mockProdSvc, logger)
-			inputOrder := &domain.Order{
-				UserID: "userX",
-				Items: []*domain.OrderItem{
-					{
-						ProductID: "prodY",
-						Quantity:  1,
-					},
-				},
-			}
+			orderUC := NewOrderUsecase(mockRepo, mockUserSvc, mockInvenSvc, mockEventProducer, logger)
+			inputOrder := domain.NewOrder("userX")
+			inputOrder.Items = []*domain.OrderItem{domain.NewOrderItem("prodY", 1)}
 
 			mockUserSvc.On("VerifyUser", mock.Anything, "userX").
 				Return(errors.New("user not found")).Once()
@@ -167,28 +160,22 @@ func TestOrderUseCase(t *testing.T) {
 			assert.Contains(t, err.Error(), "failed to verify user")
 			mockUserSvc.AssertExpectations(t)
 			mockRepo.AssertExpectations(t)
-			mockProdSvc.AssertExpectations(t)
+			mockInvenSvc.AssertExpectations(t)
 		})
 
 		t.Run("RepoCreateFail", func(t *testing.T) {
 			mockRepo := new(MockOrderRepository)
 			mockUserSvc := new(MockUserServiceClient)
-			mockProdSvc := new(MockProductServiceClient)
+			mockInvenSvc := new(MockProductServiceClient)
+			mockEventProducer := new(MockOrderEventProducer)
 			logger, _ := zap.NewDevelopment()
 
-			orderUC := NewOrderUsecase(mockRepo, mockUserSvc, mockProdSvc, logger)
-			inputOrder := &domain.Order{
-				UserID: "userX",
-				Items: []*domain.OrderItem{
-					{
-						ProductID: "prodY",
-						Quantity:  1,
-					},
-				},
-			}
+			orderUC := NewOrderUsecase(mockRepo, mockUserSvc, mockInvenSvc, mockEventProducer, logger)
+			inputOrder := domain.NewOrder("userX")
+			inputOrder.Items = []*domain.OrderItem{domain.NewOrderItem("prodY", 1)}
 
 			mockUserSvc.On("VerifyUser", mock.Anything, "userX").Return(nil).Once()
-			mockProdSvc.On("VerifyProduct", mock.Anything, "prodY").Return(nil).Once()
+			mockInvenSvc.On("VerifyInventory", mock.Anything, "prodY", 1).Return(nil).Once()
 			mockRepo.On("CreateOrderWithItems", mock.Anything, mock.Anything, mock.Anything).
 				Return(nil, errors.New("db error")).Once()
 
@@ -199,7 +186,7 @@ func TestOrderUseCase(t *testing.T) {
 			assert.Contains(t, err.Error(), "failed to create order with items")
 			mockUserSvc.AssertExpectations(t)
 			mockRepo.AssertExpectations(t)
-			mockProdSvc.AssertExpectations(t)
+			mockInvenSvc.AssertExpectations(t)
 		})
 	})
 
@@ -207,10 +194,11 @@ func TestOrderUseCase(t *testing.T) {
 		t.Run("Success", func(t *testing.T) {
 			mockRepo := new(MockOrderRepository)
 			mockUserSvc := new(MockUserServiceClient)
-			mockProdSvc := new(MockProductServiceClient)
+			mockInvenSvc := new(MockProductServiceClient)
+			mockEventProducer := new(MockOrderEventProducer)
 			logger, _ := zap.NewDevelopment()
 
-			orderUC := NewOrderUsecase(mockRepo, mockUserSvc, mockProdSvc, logger)
+			orderUC := NewOrderUsecase(mockRepo, mockUserSvc, mockInvenSvc, mockEventProducer, logger)
 			expected := &domain.Order{
 				ID:     "order123",
 				UserID: "userX",
@@ -233,10 +221,11 @@ func TestOrderUseCase(t *testing.T) {
 		t.Run("RepoError", func(t *testing.T) {
 			mockRepo := new(MockOrderRepository)
 			mockUserSvc := new(MockUserServiceClient)
-			mockProdSvc := new(MockProductServiceClient)
+			mockInvenSvc := new(MockProductServiceClient)
+			mockEventProducer := new(MockOrderEventProducer)
 			logger, _ := zap.NewDevelopment()
 
-			orderUC := NewOrderUsecase(mockRepo, mockUserSvc, mockProdSvc, logger)
+			orderUC := NewOrderUsecase(mockRepo, mockUserSvc, mockInvenSvc, mockEventProducer, logger)
 			mockRepo.On("GetOrder", mock.Anything, "orderABC").Return(nil, errors.New("not found")).Once()
 			ctx := context.Background()
 			result, err := orderUC.GetOrder(ctx, "orderABC")
@@ -251,10 +240,11 @@ func TestOrderUseCase(t *testing.T) {
 		t.Run("Success", func(t *testing.T) {
 			mockRepo := new(MockOrderRepository)
 			mockUserSvc := new(MockUserServiceClient)
-			mockProdSvc := new(MockProductServiceClient)
+			mockInvenSvc := new(MockProductServiceClient)
+			mockEventProducer := new(MockOrderEventProducer)
 			logger, _ := zap.NewDevelopment()
 
-			orderUC := NewOrderUsecase(mockRepo, mockUserSvc, mockProdSvc, logger)
+			orderUC := NewOrderUsecase(mockRepo, mockUserSvc, mockInvenSvc, mockEventProducer, logger)
 			orders := []*domain.Order{
 				{ID: "orderA", UserID: "user123", Items: []*domain.OrderItem{{ProductID: "p1", Quantity: 1}}},
 				{ID: "orderB", UserID: "user123", Items: []*domain.OrderItem{{ProductID: "p2", Quantity: 2}}},
@@ -272,10 +262,11 @@ func TestOrderUseCase(t *testing.T) {
 		t.Run("RepoError", func(t *testing.T) {
 			mockRepo := new(MockOrderRepository)
 			mockUserSvc := new(MockUserServiceClient)
-			mockProdSvc := new(MockProductServiceClient)
+			mockInvenSvc := new(MockProductServiceClient)
+			mockEventProducer := new(MockOrderEventProducer)
 			logger, _ := zap.NewDevelopment()
 
-			orderUC := NewOrderUsecase(mockRepo, mockUserSvc, mockProdSvc, logger)
+			orderUC := NewOrderUsecase(mockRepo, mockUserSvc, mockInvenSvc, mockEventProducer, logger)
 			mockRepo.On("GetOrdersByUserID", mock.Anything, "unknownUser").Return(nil, errors.New("db error")).Once()
 			ctx := context.Background()
 			result, err := orderUC.GetOrdersByUserID(ctx, "unknownUser")
@@ -290,12 +281,14 @@ func TestOrderUseCase(t *testing.T) {
 		t.Run("Success", func(t *testing.T) {
 			mockRepo := new(MockOrderRepository)
 			mockUserSvc := new(MockUserServiceClient)
+			mockEventProducer := new(MockOrderEventProducer)
 			logger, _ := zap.NewDevelopment()
 
 			orderUC := &OrderUseCaseImpl{
-				orderRepo: mockRepo,
-				userSvc:   mockUserSvc,
-				logger:    logger,
+				orderRepo:          mockRepo,
+				userSvc:            mockUserSvc,
+				orderEventProducer: mockEventProducer,
+				logger:             logger,
 			}
 
 			orderIDs := []string{"order1", "order2"}
@@ -317,12 +310,14 @@ func TestOrderUseCase(t *testing.T) {
 		t.Run("PartialFailure", func(t *testing.T) {
 			mockRepo := new(MockOrderRepository)
 			mockUserSvc := new(MockUserServiceClient)
+			mockEventProducer := new(MockOrderEventProducer)
 			logger, _ := zap.NewDevelopment()
 
 			orderUC := &OrderUseCaseImpl{
-				orderRepo: mockRepo,
-				userSvc:   mockUserSvc,
-				logger:    logger,
+				orderRepo:          mockRepo,
+				userSvc:            mockUserSvc,
+				orderEventProducer: mockEventProducer,
+				logger:             logger,
 			}
 
 			orderIDs := []string{"orderOk", "orderFail"}

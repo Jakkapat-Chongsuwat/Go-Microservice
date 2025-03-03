@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+	<testsuite tests="0" failures="0" time="0.000000" name="inventory-service/cmd/server">
+		<properties>
+			<property name="go.version" value="go1.24.0 linux/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="inventory-service/internal/adapters/columns">
+		<properties>
+			<property name="go.version" value="go1.24.0 linux/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="10" failures="0" time="0.000000" name="inventory-service/internal/adapters/grpc">
+		<properties>
+			<property name="go.version" value="go1.24.0 linux/amd64"></property>
+		</properties>
+		<testcase classname="inventory-service/internal/adapters/grpc" name="TestInventoryGRPCServer_CreateProduct" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/adapters/grpc" name="TestInventoryGRPCServer_CreateProduct_Error" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/adapters/grpc" name="TestInventoryGRPCServer_GetProduct" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/adapters/grpc" name="TestInventoryGRPCServer_GetProduct_Error" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/adapters/grpc" name="TestInventoryGRPCServer_UpdateProductMetadata" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/adapters/grpc" name="TestInventoryGRPCServer_UpdateProductMetadata_GetError" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/adapters/grpc" name="TestInventoryGRPCServer_UpdateProductStockQuantity" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/adapters/grpc" name="TestInventoryGRPCServer_UpdateProductStockQuantity_Error" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/adapters/grpc" name="TestInventoryGRPCServer_ListProducts" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/adapters/grpc" name="TestInventoryGRPCServer_ListProducts_Error" time="0.000000"></testcase>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="inventory-service/internal/adapters/models">
+		<properties>
+			<property name="go.version" value="go1.24.0 linux/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="6" failures="0" time="10.050000" name="inventory-service/internal/adapters/repository">
+		<properties>
+			<property name="go.version" value="go1.24.0 linux/amd64"></property>
+		</properties>
+		<testcase classname="inventory-service/internal/adapters/repository" name="TestGormInventoryRepository/CreateAndGetProduct_Success" time="0.030000"></testcase>
+		<testcase classname="inventory-service/internal/adapters/repository" name="TestGormInventoryRepository/UpdateProduct_Success" time="0.070000"></testcase>
+		<testcase classname="inventory-service/internal/adapters/repository" name="TestGormInventoryRepository/ListProducts_Success" time="0.070000"></testcase>
+		<testcase classname="inventory-service/internal/adapters/repository" name="TestGormInventoryRepository/GetProduct_NotFound" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/adapters/repository" name="TestGormInventoryRepository/ListProducts_Empty" time="0.030000"></testcase>
+		<testcase classname="inventory-service/internal/adapters/repository" name="TestGormInventoryRepository" time="9.850000"></testcase>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="inventory-service/internal/domain">
+		<properties>
+			<property name="go.version" value="go1.24.0 linux/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="10" failures="0" time="0.000000" name="inventory-service/internal/usecases">
+		<properties>
+			<property name="go.version" value="go1.24.0 linux/amd64"></property>
+		</properties>
+		<testcase classname="inventory-service/internal/usecases" name="TestInventoryUseCaseImpl_CreateProduct" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/usecases" name="TestInventoryUseCaseImpl_CreateProduct_Error" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/usecases" name="TestInventoryUseCaseImpl_GetProduct" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/usecases" name="TestInventoryUseCaseImpl_GetProduct_Error" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/usecases" name="TestInventoryUseCaseImpl_UpdateProductMetadata" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/usecases" name="TestInventoryUseCaseImpl_UpdateProductMetadata_GetError" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/usecases" name="TestInventoryUseCaseImpl_UpdateProductStockQuantity" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/usecases" name="TestInventoryUseCaseImpl_UpdateProductStockQuantity_GetError" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/usecases" name="TestInventoryUseCaseImpl_ListProducts" time="0.000000"></testcase>
+		<testcase classname="inventory-service/internal/usecases" name="TestInventoryUseCaseImpl_ListProducts_Error" time="0.000000"></testcase>
+	</testsuite>
+</testsuites>

@@ -1,21 +1,16 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
-	"time"
 
-	orderGrpc "order-service/internal/adapters/grpc"
-	"order-service/internal/adapters/repository"
-	"order-service/internal/clients"
-	"order-service/internal/usecases"
+	inventoryGrpc "inventory-service/internal/adapters/grpc"
+	"inventory-service/internal/adapters/repository"
+	"inventory-service/internal/usecases"
 
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -27,25 +22,10 @@ func main() {
 	logger := createLogger()
 	defer logger.Sync()
 
-	orderRepo := buildRepository(logger)
+	inventoryRepo := buildRepository(logger)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	userSvcConn, err := grpc.DialContext(ctx,
-		getEnv("USER_SERVICE_ADDRESS", "localhost:50051"),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
-	)
-	if err != nil {
-		logger.Fatal("failed to dial user service", zap.Error(err))
-	}
-	realUserClient := clients.NewGRPCUserServiceClient(userSvcConn)
-
-	dummyProductClient := clients.DummyProductServiceClient{}
-
-	orderUseCase := usecases.NewOrderUsecase(orderRepo, realUserClient, dummyProductClient, logger)
-	startGRPC(logger, orderUseCase)
+	inventoryUseCase := usecases.NewInventoryUsecase(inventoryRepo, logger)
+	startGRPC(logger, inventoryUseCase)
 }
 
 func loadEnv() {
@@ -62,7 +42,7 @@ func createLogger() *zap.Logger {
 	return logger
 }
 
-func buildRepository(logger *zap.Logger) usecases.OrderRepository {
+func buildRepository(logger *zap.Logger) usecases.InventoryRepository {
 	repoType := getEnv("REPO_TYPE", "gorm")
 	switch repoType {
 	case "gorm":
@@ -72,13 +52,13 @@ func buildRepository(logger *zap.Logger) usecases.OrderRepository {
 	}
 }
 
-func buildGormRepo(logger *zap.Logger) usecases.OrderRepository {
+func buildGormRepo(logger *zap.Logger) usecases.InventoryRepository {
 	dbDriver := getEnv("DB_DRIVER", "postgres")
 	db, err := connectGorm(dbDriver, logger)
 	if err != nil {
 		logger.Fatal("Failed to connect GORM DB", zap.Error(err))
 	}
-	return repository.NewGormOrderRepo(db, logger)
+	return repository.NewGormInventoryRepo(db, logger)
 }
 
 func connectGorm(driver string, logger *zap.Logger) (*gorm.DB, error) {
@@ -95,7 +75,7 @@ func connectPostgres(logger *zap.Logger) (*gorm.DB, error) {
 	port := getEnv("DB_PORT", "5432")
 	user := getEnv("DB_USER", "devuser")
 	pass := getEnv("DB_PASS", "devpass")
-	dbname := getEnv("DB_NAME", "order_service")
+	dbname := getEnv("DB_NAME", "inventory_service")
 	dbschema := getEnv("DB_SCHEMA", "public")
 	sslmode := getEnv("DB_SSLMODE", "disable")
 
@@ -111,7 +91,7 @@ func connectMySQL(logger *zap.Logger) (*gorm.DB, error) {
 	port := getEnv("DB_PORT", "3306")
 	user := getEnv("DB_USER", "root")
 	pass := getEnv("DB_PASS", "")
-	dbname := getEnv("DB_NAME", "order_service")
+	dbname := getEnv("DB_NAME", "inventory_service")
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", user, pass, host, port, dbname)
 	logger.Info("Connecting to MySQL", zap.String("dsn", dsn))
@@ -119,8 +99,8 @@ func connectMySQL(logger *zap.Logger) (*gorm.DB, error) {
 	return gorm.Open(mysql.Open(dsn), &gorm.Config{})
 }
 
-func startGRPC(logger *zap.Logger, uc usecases.OrderUseCase) {
-	if err := orderGrpc.StartGRPCServer("60051", uc, logger); err != nil {
+func startGRPC(logger *zap.Logger, uc usecases.InventoryUseCase) {
+	if err := inventoryGrpc.StartGRPCServer("60051", uc, logger); err != nil {
 		logger.Fatal("failed to start gRPC server", zap.Error(err))
 	}
 }

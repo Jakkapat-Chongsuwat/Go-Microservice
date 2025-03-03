@@ -5,7 +5,7 @@ package grpc
 import (
 	"fmt"
 	"net"
-	"order-service/internal/usecases"
+	"order-service/internal/domain/interfaces"
 
 	"github.com/jakkapat-chongsuwat/go-microservice/proto/order_service"
 	"go.uber.org/zap"
@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func StartGRPCServer(port string, orderUseCase usecases.OrderUseCase, logger *zap.Logger) error {
+func StartGRPCServer(port string, orderUseCase interfaces.IOrderUseCase, logger *zap.Logger) error {
 	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return fmt.Errorf("failed to listen on port %s: %w", port, err)
@@ -26,6 +26,7 @@ func StartGRPCServer(port string, orderUseCase usecases.OrderUseCase, logger *za
 		NewOrderGRPCServer(orderUseCase, logger),
 	)
 
+	// for testing purpose
 	reflection.Register(grpcServer)
 
 	logger.Info("Starting OrderService gRPC server", zap.String("port", port))

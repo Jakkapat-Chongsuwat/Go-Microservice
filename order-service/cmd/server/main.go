@@ -5,11 +5,15 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	orderGrpc "order-service/internal/adapters/grpc"
+	"order-service/internal/adapters/kafka"
+	"order-service/internal/adapters/models"
 	"order-service/internal/adapters/repository"
 	"order-service/internal/clients"
+	"order-service/internal/domain/interfaces"
 	"order-service/internal/usecases"
 
 	"github.com/joho/godotenv"
@@ -23,6 +27,9 @@ import (
 
 func main() {
 	loadEnv()
+
+	models.LoadSchema("configs/order_event_schema.json")
+	schemaStr := models.OrderEventSchema
 
 	logger := createLogger()
 	defer logger.Sync()
@@ -42,9 +49,28 @@ func main() {
 	}
 	realUserClient := clients.NewGRPCUserServiceClient(userSvcConn)
 
-	dummyProductClient := clients.DummyProductServiceClient{}
+	invConn, err := grpc.DialContext(ctx,
+		getEnv("INVENTORY_SERVICE_ADDRESS", "localhost:30051"),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	)
+	if err != nil {
+		logger.Fatal("failed to dial inventory service", zap.Error(err))
+	}
+	realInventoryClient := clients.NewGRPCInventoryServiceClient(invConn)
 
-	orderUseCase := usecases.NewOrderUsecase(orderRepo, realUserClient, dummyProductClient, logger)
+	kafkaBrokers := strings.Split(getEnv("KAFKA_BROKERS", "localhost:9092"), ",")
+	orderTopic := getEnv("KAFKA_ORDER_TOPIC", "order-events")
+	schemaRegistryURL := getEnv("SCHEMA_REGISTRY_URL", "http://localhost:8081")
+	subject := "order-events-value"
+
+	orderEventProducer, err := kafka.NewOrderEventProducer(kafkaBrokers, orderTopic, schemaRegistryURL, subject, schemaStr)
+	if err != nil {
+		logger.Fatal("failed to create order event producer", zap.Error(err))
+	}
+	defer orderEventProducer.Close()
+
+	orderUseCase := usecases.NewOrderUsecase(orderRepo, realUserClient, realInventoryClient, orderEventProducer, logger)
 	startGRPC(logger, orderUseCase)
 }
 
@@ -62,7 +88,7 @@ func createLogger() *zap.Logger {
 	return logger
 }
 
-func buildRepository(logger *zap.Logger) usecases.OrderRepository {
+func buildRepository(logger *zap.Logger) interfaces.IOrderRepository {
 	repoType := getEnv("REPO_TYPE", "gorm")
 	switch repoType {
 	case "gorm":
@@ -72,7 +98,7 @@ func buildRepository(logger *zap.Logger) usecases.OrderRepository {
 	}
 }
 
-func buildGormRepo(logger *zap.Logger) usecases.OrderRepository {
+func buildGormRepo(logger *zap.Logger) interfaces.IOrderRepository {
 	dbDriver := getEnv("DB_DRIVER", "postgres")
 	db, err := connectGorm(dbDriver, logger)
 	if err != nil {
@@ -119,8 +145,9 @@ func connectMySQL(logger *zap.Logger) (*gorm.DB, error) {
 	return gorm.Open(mysql.Open(dsn), &gorm.Config{})
 }
 
-func startGRPC(logger *zap.Logger, uc usecases.OrderUseCase) {
-	if err := orderGrpc.StartGRPCServer("60051", uc, logger); err != nil {
+func startGRPC(logger *zap.Logger, uc interfaces.IOrderUseCase) {
+	port := getEnv("GRPC_PORT", "60051")
+	if err := orderGrpc.StartGRPCServer(port, uc, logger); err != nil {
 		logger.Fatal("failed to start gRPC server", zap.Error(err))
 	}
 }

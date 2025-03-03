@@ -4,13 +4,11 @@ package order_service;
 
 option go_package = "github.com/jakkapat-chongsuwat/go-microservice/proto/order_service;order_service";
 
-// Request message for creating an order.
 message CreateOrderRequest {
   string user_id = 1;
   repeated OrderItem items = 2;
 }
 
-// Response message for creating an order.
 message CreateOrderResponse {
   string orderId = 1;
   string userId = 2;
@@ -18,33 +16,27 @@ message CreateOrderResponse {
   repeated OrderItem items = 4;
 }
 
-// Represents an individual order item.
 message OrderItem {
   string productId = 1;
   int32 quantity = 2;
 }
 
-// Request message for getting a single order.
 message GetOrderRequest {
   string order_id = 1;
 }
 
-// Response message for getting a single order.
 message GetOrderResponse {
   Order order = 1;
 }
 
-// Request message for getting orders by a user ID.
 message GetOrdersByUserIDRequest {
   string user_id = 1;
 }
 
-// Response message for getting orders by a user ID.
 message GetOrdersByUserIDResponse {
   repeated Order orders = 1;
 }
 
-// Represents an order.
 message Order {
   string orderId = 1;
   string userId = 2;
@@ -52,7 +44,6 @@ message Order {
   repeated OrderItem items = 4;
 }
 
-// Order service definition.
 service OrderService {
   rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
   rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);

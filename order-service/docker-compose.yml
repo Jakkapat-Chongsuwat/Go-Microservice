@@ -6,11 +6,85 @@ services:
       POSTGRES_USER: devuser
       POSTGRES_PASSWORD: devpass
       POSTGRES_DB: order_service
+      GRPC_PORT: "60051"
     ports:
       - "5556:5556"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     command: -p 5556 -c 'shared_preload_libraries=pgcrypto'
 
+  order-service:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    ports:
+      - "60051:60051"
+    environment:
+      - DB_HOST=order_service_db
+      - DB_USER=devuser
+      - DB_PASS=devpass
+      - DB_PORT=5556
+      - DB_NAME=order_service
+      - DB_SCHEMA=order_service
+      - DB_SSLMODE=disable
+      - DB_DRIVER=postgres
+      - REPO_TYPE=gorm
+      - USER_SERVICE_ADDRESS=user-service:50051
+      - INVENTORY_SERVICE_ADDRESS=localhost:30051
+      - GRPC_PORT=60051
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_ORDER_TOPIC=order-events
+    depends_on:
+      - order_service_db
+      - user-service
+      - kafka
+
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    environment:
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_LISTENERS=CONTROLLER://0.0.0.0:9093,BROKER://0.0.0.0:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=BROKER://localhost:9092
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_NUM_PARTITIONS=3
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    volumes:
+      - kafka_data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    container_name: schema-registry
+    depends_on:
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=PLAINTEXT://kafka:9092
+      - SCHEMA_REGISTRY_LISTENERS=http://0.0.0.0:8081
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    container_name: kafdrop
+    depends_on:
+      - kafka
+    ports:
+      - "9000:9000"
+    environment:
+      - KAFKA_BROKERCONNECT=kafka:9092
+      - JVM_OPTS=-Xms32M -Xmx64M
+      - SERVER_PORT=9000
+
 volumes:
   postgres_data:
+  kafka_data:

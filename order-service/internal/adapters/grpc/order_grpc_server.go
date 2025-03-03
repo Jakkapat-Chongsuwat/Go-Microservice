@@ -3,7 +3,7 @@ package grpc
 import (
 	"context"
 	"order-service/internal/domain"
-	"order-service/internal/usecases"
+	"order-service/internal/domain/interfaces"
 
 	"github.com/jakkapat-chongsuwat/go-microservice/proto/order_service"
 	"go.uber.org/zap"
@@ -11,11 +11,11 @@ import (
 
 type OrderGRPCServer struct {
 	order_service.UnimplementedOrderServiceServer
-	orderUseCase usecases.OrderUseCase
+	orderUseCase interfaces.IOrderUseCase
 	logger       *zap.Logger
 }
 
-func NewOrderGRPCServer(orderUC usecases.OrderUseCase, logger *zap.Logger) *OrderGRPCServer {
+func NewOrderGRPCServer(orderUC interfaces.IOrderUseCase, logger *zap.Logger) *OrderGRPCServer {
 	return &OrderGRPCServer{
 		orderUseCase: orderUC,
 		logger:       logger,

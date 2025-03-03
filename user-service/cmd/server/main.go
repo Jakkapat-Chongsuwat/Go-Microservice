@@ -130,7 +130,8 @@ func demoUseCase(logger *zap.Logger, u usecases.UserUseCase) {
 }
 
 func startGRPC(logger *zap.Logger, u usecases.UserUseCase) {
-	if err := grpc.StartGRPCServer("50051", u, logger); err != nil {
+	port := getEnv("GRPC_PORT", "50051")
+	if err := grpc.StartGRPCServer(port, u, logger); err != nil {
 		logger.Fatal("failed to start gRPC server", zap.Error(err))
 	}
 }

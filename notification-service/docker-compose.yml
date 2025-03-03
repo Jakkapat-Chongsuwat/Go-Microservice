@@ -1,0 +1,62 @@
+services:
+  kafka:
+    image: bitnami/kafka:latest
+    environment:
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_LISTENERS=CONTROLLER://0.0.0.0:9093,BROKER://0.0.0.0:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=BROKER://localhost:9092
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_NUM_PARTITIONS=3
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    volumes:
+      - kafka_data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    depends_on:
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=PLAINTEXT://kafka:9092
+      - SCHEMA_REGISTRY_LISTENERS=http://0.0.0.0:8081
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    depends_on:
+      - kafka
+    ports:
+      - "9000:9000"
+    environment:
+      - KAFKA_BROKERCONNECT=kafka:9092
+      - JVM_OPTS=-Xms32M -Xmx64M
+      - SERVER_PORT=9000
+
+  notification-service:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    ports:
+      - "70051:70051"
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_GROUP_ID=notification-service-group
+      - KAFKA_TOPIC=notifications
+      - SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - GRPC_PORT=70051
+    depends_on:
+      - kafka
+      - schema-registry
+
+volumes:
+  kafka_data:

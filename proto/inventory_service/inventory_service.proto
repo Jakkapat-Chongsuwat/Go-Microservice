@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package inventory_service;
+
+option go_package = "github.com/jakkapat-chongsuwat/go-microservice/proto/inventory_service;inventory_service";
+
+message Product {
+  string id = 1;         
+  string name = 2;      
+  int32 quantity = 3;    
+  double price = 4;     
+}
+
+message CreateProductRequest {
+  string name = 1;
+  int32 quantity = 2;
+  double price = 3;
+}
+
+message CreateProductResponse {
+  Product product = 1;
+}
+
+message GetProductRequest {
+  string id = 1;
+}
+
+message GetProductResponse {
+  Product product = 1;
+}
+
+message UpdateProductMetadataRequest {
+  string id = 1;
+  string name = 2;
+  double price = 3;
+}
+
+message UpdateProductMetadataResponse {
+  Product product = 1;
+}
+
+message UpdateProductStockQuantityRequest {
+  string id = 1;
+  int32 quantity_change = 2;
+}
+
+message UpdateProductStockQuantityResponse {
+  Product product = 1;
+}
+
+message ListProductsRequest {}
+
+message ListProductsResponse {
+  repeated Product products = 1;
+}
+
+service InventoryService {
+  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc UpdateProductMetadata(UpdateProductMetadataRequest) returns (UpdateProductMetadataResponse);
+  rpc UpdateProductStockQuantity(UpdateProductStockQuantityRequest) returns (UpdateProductStockQuantityResponse);
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+}

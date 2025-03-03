@@ -4,33 +4,28 @@ package user_service;
 
 option go_package = "github.com/jakkapat-chongsuwat/go-microservice/proto/user_service;user_service";
 
-// Request message for creating a user.
 message CreateUserRequest {
   string id = 1;
   string username = 2;
   string email = 3;
 }
 
-// Response message for creating a user.
 message CreateUserResponse {
   string id = 1;
   string username = 2;
   string email = 3;
 }
 
-// Request message for getting a user by ID.
 message GetUserRequest {
   string id = 1;
 }
 
-// Response message for getting a user.
 message GetUserResponse {
   string id = 1;
   string username = 2;
   string email = 3;
 }
 
-// User service definition.
 service UserService {
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
   rpc GetUserByID(GetUserRequest) returns (GetUserResponse);
