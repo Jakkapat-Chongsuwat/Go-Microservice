@@ -23,7 +23,7 @@ type OrderUseCaseImpl struct {
 	orderRepo          interfaces.IOrderRepository
 	userSvc            UserServiceClient
 	inventorySvc       InventoryServiceClient
-	orderEventProducer interfaces.OrderEventProducer
+	orderEventProducer interfaces.IOrderEventProducer
 	logger             *zap.Logger
 }
 
@@ -33,7 +33,7 @@ func NewOrderUsecase(
 	repo interfaces.IOrderRepository,
 	userClient UserServiceClient,
 	inventoryClient InventoryServiceClient,
-	eventProducer interfaces.OrderEventProducer,
+	eventProducer interfaces.IOrderEventProducer,
 	logger *zap.Logger,
 ) interfaces.IOrderUseCase {
 	return &OrderUseCaseImpl{
@@ -45,81 +45,89 @@ func NewOrderUsecase(
 	}
 }
 
+// test uncle bob style
 func (o *OrderUseCaseImpl) CreateOrderWithItems(ctx context.Context, order *domain.Order, items []*domain.OrderItem) (*domain.Order, error) {
 	o.logger.Info("CreateOrderWithItems called", zap.String("userID", order.UserID))
 
-	if err := o.userSvc.VerifyUser(ctx, order.UserID); err != nil {
-		o.logger.Error("failed to verify user", zap.String("userID", order.UserID), zap.Error(err))
+	if err := o.verifyUser(ctx, order.UserID); err != nil {
 		return nil, fmt.Errorf("failed to verify user: %w", err)
 	}
 
-	for _, item := range items {
-		if err := o.inventorySvc.VerifyInventory(ctx, item.ProductID, item.Quantity); err != nil {
-			o.logger.Error("failed to verify inventory", zap.String("productID", item.ProductID), zap.Error(err))
-			return nil, fmt.Errorf("failed to verify inventory: %w", err)
-		}
+	if err := o.verifyInventory(ctx, items); err != nil {
+		return nil, fmt.Errorf("failed to verify inventory: %w", err)
 	}
 
-	order.Items = items
-
-	result, err := o.orderRepo.CreateOrderWithItems(ctx, order, items)
+	createdOrder, err := o.persistOrder(ctx, order, items)
 	if err != nil {
-		o.logger.Error("failed to create order with items", zap.Error(err))
 		return nil, fmt.Errorf("failed to create order with items: %w", err)
 	}
 
-	o.logger.Info("order with items created", zap.String("orderID", result.ID))
+	o.publishOrderEvent(createdOrder)
 
+	return createdOrder, nil
+}
+
+func (o *OrderUseCaseImpl) verifyUser(ctx context.Context, userID string) error {
+	return o.userSvc.VerifyUser(ctx, userID)
+}
+
+func (o *OrderUseCaseImpl) verifyInventory(ctx context.Context, items []*domain.OrderItem) error {
+	for _, item := range items {
+		if err := o.inventorySvc.VerifyInventory(ctx, item.ProductID, item.Quantity); err != nil {
+			o.logger.Error("Inventory check failed", zap.String("productID", item.ProductID), zap.Error(err))
+			return err
+		}
+	}
+	return nil
+}
+
+func (o *OrderUseCaseImpl) persistOrder(ctx context.Context, order *domain.Order, items []*domain.OrderItem) (*domain.Order, error) {
+	return o.orderRepo.CreateOrderWithItems(ctx, order, items)
+}
+
+func (o *OrderUseCaseImpl) publishOrderEvent(order *domain.Order) {
 	event := domain.OrderEvent{
-		OrderID:   result.ID,
+		OrderID:   order.ID,
 		EventType: "CREATED",
 		Timestamp: time.Now(),
 	}
 	if err := o.orderEventProducer.SendOrderEvent(event); err != nil {
 		o.logger.Error("failed to send order event", zap.Error(err))
 	}
-
-	return result, nil
 }
 
 func (o *OrderUseCaseImpl) GetOrder(ctx context.Context, orderID string) (*domain.Order, error) {
 	o.logger.Info("GetOrder called", zap.String("orderID", orderID))
-
 	order, err := o.orderRepo.GetOrder(ctx, orderID)
 	if err != nil {
 		o.logger.Error("failed to get order", zap.String("orderID", orderID), zap.Error(err))
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
-
 	o.logger.Info("order found", zap.String("orderID", orderID))
 	return order, nil
 }
 
 func (o *OrderUseCaseImpl) GetOrdersByUserID(ctx context.Context, userID string) ([]*domain.Order, error) {
 	o.logger.Info("GetOrdersByUserID called", zap.String("userID", userID))
-
 	orders, err := o.orderRepo.GetOrdersByUserID(ctx, userID)
 	if err != nil {
 		o.logger.Error("failed to get orders", zap.String("userID", userID), zap.Error(err))
 		return nil, fmt.Errorf("failed to get orders: %w", err)
 	}
-
 	o.logger.Info("orders found", zap.String("userID", userID))
 	return orders, nil
 }
 
+// test get parallel orders, batch can be more efficient
 func (o *OrderUseCaseImpl) GetOrdersInParallel(ctx context.Context, orderIDs []string) ([]*domain.Order, error) {
 	o.logger.Info("GetOrdersInParallel called", zap.Int("count", len(orderIDs)))
-
 	var (
 		wg       sync.WaitGroup
 		mu       sync.Mutex
 		results  []*domain.Order
 		firstErr error
 	)
-
 	wg.Add(len(orderIDs))
-
 	for _, id := range orderIDs {
 		go func(oid string) {
 			defer wg.Done()
@@ -128,7 +136,6 @@ func (o *OrderUseCaseImpl) GetOrdersInParallel(ctx context.Context, orderIDs []s
 			defer mu.Unlock()
 			if err != nil && firstErr == nil {
 				firstErr = err
-				return
 			}
 			results = append(results, ord)
 		}(id)

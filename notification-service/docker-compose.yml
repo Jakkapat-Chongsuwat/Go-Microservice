@@ -1,15 +1,19 @@
 services:
   kafka:
     image: bitnami/kafka:latest
+    container_name: kafka
     environment:
       - KAFKA_CFG_PROCESS_ROLES=broker,controller
       - KAFKA_CFG_LISTENERS=CONTROLLER://0.0.0.0:9093,BROKER://0.0.0.0:9092
-      - KAFKA_CFG_ADVERTISED_LISTENERS=BROKER://localhost:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=BROKER://kafka:9092
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=BROKER
       - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_CFG_NUM_PARTITIONS=3
       - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,BROKER:PLAINTEXT
     ports:
       - "9092:9092"
       - "9093:9093"
@@ -53,7 +57,7 @@ services:
       - KAFKA_GROUP_ID=notification-service-group
       - KAFKA_TOPIC=notifications
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
-      - GRPC_PORT=70051
+      - WS_PORT=8080
     depends_on:
       - kafka
       - schema-registry

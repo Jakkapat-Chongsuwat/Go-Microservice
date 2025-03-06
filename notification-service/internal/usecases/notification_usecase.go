@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"notification-service/internal/domain"
+	"notification-service/internal/domain/interfaces"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,12 +16,16 @@ type NotificationUseCase interface {
 }
 
 type notificationUseCaseImpl struct {
-	logger *zap.Logger
+	logger    *zap.Logger
+	publisher interfaces.NotificationPublisher
 }
 
-func NewNotificationUseCase(logger *zap.Logger) NotificationUseCase {
+var _ NotificationUseCase = (*notificationUseCaseImpl)(nil)
+
+func NewNotificationUseCase(logger *zap.Logger, publisher interfaces.NotificationPublisher) NotificationUseCase {
 	return &notificationUseCaseImpl{
-		logger: logger,
+		logger:    logger,
+		publisher: publisher,
 	}
 }
 
@@ -40,5 +45,10 @@ func (uc *notificationUseCaseImpl) ProcessNotification(ctx context.Context, noti
 		zap.String("type", notif.Type),
 		zap.String("message", notif.Message))
 	fmt.Printf("Processed notification: %+v\n", notif)
+
+	if err := uc.publisher.PublishNotification(notif); err != nil {
+		uc.logger.Error("failed to publish notification", zap.Error(err))
+	}
+
 	return nil
 }

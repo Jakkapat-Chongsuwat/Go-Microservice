@@ -18,6 +18,6 @@ type IOrderRepository interface {
 	CreateOrderWithItems(ctx context.Context, order *domain.Order, items []*domain.OrderItem) (*domain.Order, error)
 }
 
-type OrderEventProducer interface {
+type IOrderEventProducer interface {
 	SendOrderEvent(event domain.OrderEvent) error
 }

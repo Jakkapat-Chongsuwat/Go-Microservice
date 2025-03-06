@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 	"user-service/internal/adapters/grpc"
 	"user-service/internal/adapters/repository"
 	"user-service/internal/usecases"
@@ -87,7 +88,20 @@ func connectPostgres(logger *zap.Logger) (*gorm.DB, error) {
 		host, port, user, pass, dbname, sslmode, dbschema)
 	logger.Info("Connecting to Postgres", zap.String("dsn", dsn))
 
-	return gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	var db *gorm.DB
+	var err error
+	maxRetries := 15
+
+	for i := 0; i < maxRetries; i++ {
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		if err == nil {
+			return db, nil
+		}
+		logger.Warn("Postgres not ready, retrying...", zap.Int("attempt", i+1), zap.Error(err))
+		time.Sleep(2 * time.Second)
+	}
+
+	return nil, fmt.Errorf("failed to connect to Postgres after %d attempts: %w", maxRetries, err)
 }
 
 func connectMySQL(logger *zap.Logger) (*gorm.DB, error) {

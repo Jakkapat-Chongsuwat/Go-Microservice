@@ -1,0 +1,50 @@
+{
+  "version": 2,
+  "extra_config": {
+    "grpc": {
+      "@comment": "Load proto definitions for gRPC integration",
+      "catalog": ["grpcatalog/order_service/order_service.proto"]
+    }
+  },
+  "endpoints": [
+    {
+      "@comment": "Health endpoint that returns a static response",
+      "endpoint": "/health",
+      "method": "GET",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "host": ["localhost"],
+          "url_pattern": "/",
+          "extra_config": {
+            "static": {
+              "data": "{\"status\":\"ok\"}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "@comment": "REST endpoint that translates to gRPC CreateOrder call",
+      "endpoint": "/orders",
+      "method": "POST",
+      "input_query_strings": ["*"],
+      "output_encoding": "json",
+      "backend": [
+        {
+          "host": ["order-service:60051"],
+          "url_pattern": "/order_service.OrderService/CreateOrder",
+          "extra_config": {
+            "backend/grpc": {
+              "client_tls": {
+                "@comment": "For development only: allow insecure connections",
+                "allow_insecure_connections": true
+              },
+              "use_request_body": true
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -5,6 +5,7 @@ go 1.24.0
 require (
 	github.com/IBM/sarama v1.45.0
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.5.1
 	github.com/linkedin/goavro/v2 v2.13.1
 	github.com/riferrei/srclient v0.7.1

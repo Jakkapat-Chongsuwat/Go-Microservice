@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -36,7 +37,7 @@ func main() {
 
 	orderRepo := buildRepository(logger)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	userSvcConn, err := grpc.DialContext(ctx,
@@ -49,8 +50,13 @@ func main() {
 	}
 	realUserClient := clients.NewGRPCUserServiceClient(userSvcConn)
 
+	invAddress := getEnv("INVENTORY_SERVICE_ADDRESS", "inventory-service:30051")
+	if err := waitForInventoryService(invAddress, 60*time.Second); err != nil {
+		logger.Fatal("inventory service not reachable", zap.Error(err))
+	}
+
 	invConn, err := grpc.DialContext(ctx,
-		getEnv("INVENTORY_SERVICE_ADDRESS", "localhost:30051"),
+		invAddress,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
 	)
@@ -158,4 +164,17 @@ func getEnv(key, fallback string) string {
 		return fallback
 	}
 	return val
+}
+
+func waitForInventoryService(address string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		conn, err := net.DialTimeout("tcp", address, 2*time.Second)
+		if err == nil {
+			conn.Close()
+			return nil
+		}
+		time.Sleep(2 * time.Second)
+	}
+	return fmt.Errorf("inventory service %s not reachable after %s", address, timeout)
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	inventoryGrpc "inventory-service/internal/adapters/grpc"
 	"inventory-service/internal/adapters/repository"
@@ -76,14 +77,24 @@ func connectPostgres(logger *zap.Logger) (*gorm.DB, error) {
 	user := getEnv("DB_USER", "devuser")
 	pass := getEnv("DB_PASS", "devpass")
 	dbname := getEnv("DB_NAME", "inventory_service")
-	dbschema := getEnv("DB_SCHEMA", "public")
+	dbschema := getEnv("DB_SCHEMA", "inventory_service")
 	sslmode := getEnv("DB_SSLMODE", "disable")
 
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s search_path=%s",
 		host, port, user, pass, dbname, sslmode, dbschema)
 	logger.Info("Connecting to Postgres", zap.String("dsn", dsn))
 
-	return gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	var db *gorm.DB
+	var err error
+	for i := 0; i < 15; i++ {
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		if err == nil {
+			return db, nil
+		}
+		logger.Warn("Postgres not ready yet, retrying...", zap.Int("attempt", i+1), zap.Error(err))
+		time.Sleep(2 * time.Second)
+	}
+	return nil, fmt.Errorf("failed to connect to Postgres after multiple attempts: %w", err)
 }
 
 func connectMySQL(logger *zap.Logger) (*gorm.DB, error) {
@@ -100,7 +111,8 @@ func connectMySQL(logger *zap.Logger) (*gorm.DB, error) {
 }
 
 func startGRPC(logger *zap.Logger, uc usecases.InventoryUseCase) {
-	if err := inventoryGrpc.StartGRPCServer("60051", uc, logger); err != nil {
+	port := getEnv("GRPC_PORT", "30051")
+	if err := inventoryGrpc.StartGRPCServer(port, uc, logger); err != nil {
 		logger.Fatal("failed to start gRPC server", zap.Error(err))
 	}
 }

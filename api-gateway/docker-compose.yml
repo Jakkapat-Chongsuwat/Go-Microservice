@@ -1,0 +1,13 @@
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "10051:10051"
+    environment:
+      - PORT=10051
+      - ORDER_SERVICE_URL=http://localhost:60051
+      - NOTIFICATION_SERVICE_URL=http://localhost:20051
+      - INVENTORY_SERVICE_URL=http://localhost:30051
+      - USER_SERVICE_URL=http://localhost:50051

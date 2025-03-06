@@ -11,9 +11,15 @@ import (
 	"go.uber.org/zap"
 )
 
+type NoOpPublisher struct{}
+
+func (n *NoOpPublisher) PublishNotification(notif *domain.Notification) error {
+	return nil
+}
+
 func TestProcessNotification_GeneratesDefaults(t *testing.T) {
 	logger := zap.NewNop()
-	uc := NewNotificationUseCase(logger)
+	uc := NewNotificationUseCase(logger, &NoOpPublisher{})
 
 	notif := &domain.Notification{
 		Type:    "test",
@@ -30,7 +36,7 @@ func TestProcessNotification_GeneratesDefaults(t *testing.T) {
 
 func TestProcessNotification_UsesExistingValues(t *testing.T) {
 	logger := zap.NewNop()
-	uc := NewNotificationUseCase(logger)
+	uc := NewNotificationUseCase(logger, &NoOpPublisher{})
 
 	customID := "abc-123"
 	customTime := time.Date(2025, time.January, 1, 12, 0, 0, 0, time.UTC)
