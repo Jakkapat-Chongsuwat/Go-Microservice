@@ -17,7 +17,7 @@ type UserRepository interface {
 }
 
 type UserUseCase interface {
-	CreateUser(ctx context.Context, id, username, email string) (*domain.User, error)
+	CreateUser(ctx context.Context, username, email string) (*domain.User, error)
 	GetUserInParallel(ctx context.Context, userIDs []string) ([]*domain.User, error)
 	GetUsersWithConcurrencyLimit(ctx context.Context, userIDs []string, maxWorkers int) ([]*domain.User, error)
 	GetUsersFailFast(ctx context.Context, userIDs []string, maxWorkers int) ([]*domain.User, error)
@@ -35,16 +35,18 @@ func NewUserUseCase(userRepo UserRepository, logger *zap.Logger) UserUseCase {
 	}
 }
 
-func (u *UserUseCaseImpl) CreateUser(ctx context.Context, id, username, email string) (*domain.User, error) {
-	u.logger.Info("CreateUser called", zap.String("id", id), zap.String("username", username), zap.String("email", email))
+func (u *UserUseCaseImpl) CreateUser(ctx context.Context, username, email string) (*domain.User, error) {
+	u.logger.Info("CreateUser called", zap.String("username", username), zap.String("email", email))
 	if email == "" {
-		u.logger.Error("invalid email", zap.String("id", id))
+		u.logger.Error("invalid email", zap.String("username", username))
 		return nil, domain.ErrInvalidEmail
 	}
-	user := &domain.User{ID: id, Username: username, Email: email}
+
+	user := domain.NewUser(username, email)
+
 	err := u.userRepo.Save(ctx, user)
 	if err != nil {
-		u.logger.Error("failed to save user", zap.String("id", id), zap.Error(err))
+		u.logger.Error("failed to save user", zap.String("id", user.ID), zap.Error(err))
 		return nil, fmt.Errorf("failed to save user: %w", err)
 	}
 	u.logger.Info("user created", zap.String("id", user.ID))

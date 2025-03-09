@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	fiber_http "order-service/internal/adapters/fiber"
 	orderGrpc "order-service/internal/adapters/grpc"
 	"order-service/internal/adapters/kafka"
 	"order-service/internal/adapters/models"
@@ -17,6 +19,7 @@ import (
 	"order-service/internal/domain/interfaces"
 	"order-service/internal/usecases"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -70,6 +73,10 @@ func main() {
 	schemaRegistryURL := getEnv("SCHEMA_REGISTRY_URL", "http://localhost:8081")
 	subject := "order-events-value"
 
+	if err := waitForSchemaRegistry(schemaRegistryURL, 60*time.Second); err != nil {
+		logger.Fatal("schema registry not reachable", zap.Error(err))
+	}
+
 	orderEventProducer, err := kafka.NewOrderEventProducer(kafkaBrokers, orderTopic, schemaRegistryURL, subject, schemaStr)
 	if err != nil {
 		logger.Fatal("failed to create order event producer", zap.Error(err))
@@ -77,7 +84,10 @@ func main() {
 	defer orderEventProducer.Close()
 
 	orderUseCase := usecases.NewOrderUsecase(orderRepo, realUserClient, realInventoryClient, orderEventProducer, logger)
-	startGRPC(logger, orderUseCase)
+
+	go startGRPC(logger, orderUseCase)
+
+	startHTTP(logger, orderUseCase)
 }
 
 func loadEnv() {
@@ -158,6 +168,13 @@ func startGRPC(logger *zap.Logger, uc interfaces.IOrderUseCase) {
 	}
 }
 
+func startHTTP(logger *zap.Logger, uc interfaces.IOrderUseCase) {
+	app := fiber.New()
+	fiber_http.RegisterOrderRoutes(app, fiber_http.NewOrderHTTPHandler(uc, logger))
+	port := getEnv("HTTP_PORT", "8080")
+	log.Fatal(app.Listen(":" + port))
+}
+
 func getEnv(key, fallback string) string {
 	val := os.Getenv(key)
 	if val == "" {
@@ -177,4 +194,16 @@ func waitForInventoryService(address string, timeout time.Duration) error {
 		time.Sleep(2 * time.Second)
 	}
 	return fmt.Errorf("inventory service %s not reachable after %s", address, timeout)
+}
+
+func waitForSchemaRegistry(url string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		resp, err := http.Head(url)
+		if err == nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			return nil
+		}
+		time.Sleep(2 * time.Second)
+	}
+	return fmt.Errorf("schema registry %s not reachable after %s", url, timeout)
 }

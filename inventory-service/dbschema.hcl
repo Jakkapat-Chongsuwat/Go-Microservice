@@ -47,7 +47,9 @@ function "set_updated_at" {
   return = trigger
   as = <<-SQL
     BEGIN
-      NEW.updated_at := CURRENT_TIMESTAMP;
+      IF NEW.updated_at IS NULL THEN
+        NEW.updated_at := timezone('utc', now());
+      END IF;
       RETURN NEW;
     END;
   SQL

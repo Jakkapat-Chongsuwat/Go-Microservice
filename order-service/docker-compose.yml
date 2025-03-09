@@ -19,6 +19,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "60051:60051"
+      - "60052:60052"
     environment:
       - DB_HOST=order_service_db
       - DB_USER=devuser
@@ -34,6 +35,7 @@ services:
       - GRPC_PORT=60051
       - KAFKA_BROKERS=kafka:9092
       - KAFKA_ORDER_TOPIC=order-events
+      - HTTP_PORT=60052
     depends_on:
       - order_service_db
       - user-service

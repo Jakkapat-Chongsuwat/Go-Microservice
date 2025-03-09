@@ -38,15 +38,18 @@ func TestUserUseCase(t *testing.T) {
 			logger, _ := zap.NewDevelopment()
 			userUseCase := NewUserUseCase(mockRepo, logger)
 			ctx := context.Background()
-			expectedUser := &domain.User{
-				ID:       "1",
-				Username: "testuser",
-				Email:    "test@example.com",
-			}
-			mockRepo.On("Save", mock.Anything, expectedUser).Return(nil).Once()
-			user, err := userUseCase.CreateUser(ctx, "1", "testuser", "test@example.com")
+
+			mockRepo.On("Save", mock.Anything, mock.MatchedBy(func(user *domain.User) bool {
+				return user.Username == "testuser" &&
+					user.Email == "test@example.com" &&
+					user.ID != ""
+			})).Return(nil).Once()
+
+			user, err := userUseCase.CreateUser(ctx, "testuser", "test@example.com")
 			assert.NoError(t, err)
-			assert.Equal(t, expectedUser, user)
+			assert.NotEmpty(t, user.ID)
+			assert.Equal(t, "testuser", user.Username)
+			assert.Equal(t, "test@example.com", user.Email)
 			mockRepo.AssertExpectations(t)
 			t.Log("✅  Finished Test: CreateUser Success")
 		})
@@ -56,7 +59,7 @@ func TestUserUseCase(t *testing.T) {
 			logger, _ := zap.NewDevelopment()
 			userUseCase := NewUserUseCase(mockRepo, logger)
 			ctx := context.Background()
-			_, err := userUseCase.CreateUser(ctx, "1", "user", "")
+			_, err := userUseCase.CreateUser(ctx, "user", "")
 			assert.Error(t, err)
 			assert.Equal(t, domain.ErrInvalidEmail, err)
 			mockRepo.AssertExpectations(t)

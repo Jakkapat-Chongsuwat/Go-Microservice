@@ -1,17 +1,16 @@
-// user-service\cmd\server\main.go
-
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
 	"time"
+	fiber_http "user-service/internal/adapters/fiber"
 	"user-service/internal/adapters/grpc"
 	"user-service/internal/adapters/repository"
 	"user-service/internal/usecases"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 	"gorm.io/driver/mysql"
@@ -28,8 +27,9 @@ func main() {
 	repo := buildRepository(logger)
 	userUsecase := usecases.NewUserUseCase(repo, logger)
 
-	demoUseCase(logger, userUsecase)
-	startGRPC(logger, userUsecase)
+	go startGRPC(logger, userUsecase)
+
+	startHTTP(logger, userUsecase)
 }
 
 func loadEnv() {
@@ -117,36 +117,27 @@ func connectMySQL(logger *zap.Logger) (*gorm.DB, error) {
 	return gorm.Open(mysql.Open(dsn), &gorm.Config{})
 }
 
-func demoUseCase(logger *zap.Logger, u usecases.UserUseCase) {
-	fmt.Println("Running demo use case")
-	ctx := context.Background()
-
-	if user, err := u.CreateUser(ctx, "1", "Alice", "alice@example.com"); err == nil {
-		logger.Info("Created user1", zap.Any("user", user))
-	}
-	if user, err := u.CreateUser(ctx, "2", "Bob", "bob@example.com"); err == nil {
-		logger.Info("Created user2", zap.Any("user", user))
-	}
-	if user, err := u.CreateUser(ctx, "3", "Charlie", "charlie@example.com"); err == nil {
-		logger.Info("Created user3", zap.Any("user", user))
-	}
-
-	ids := []string{"1", "2", "3"}
-	users, err := u.GetUserInParallel(ctx, ids)
-	if err != nil {
-		logger.Error("Failed parallel retrieval", zap.Strings("ids", ids), zap.Error(err))
-		return
-	}
-	fmt.Printf("Got users in parallel:\n")
-	for _, usr := range users {
-		logger.Info("User in parallel", zap.Any("user", usr))
-	}
-}
-
 func startGRPC(logger *zap.Logger, u usecases.UserUseCase) {
 	port := getEnv("GRPC_PORT", "50051")
 	if err := grpc.StartGRPCServer(port, u, logger); err != nil {
 		logger.Fatal("failed to start gRPC server", zap.Error(err))
+	}
+}
+
+func startHTTP(logger *zap.Logger, u usecases.UserUseCase) {
+	app := fiber.New()
+
+	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.SendString("User Service is running")
+	})
+
+	fiber_http.RegisterUserRoutes(app, fiber_http.NewUserHttpHandler(u, logger))
+
+	port := getEnv("HTTP_PORT", "8080")
+	logger.Info("Starting HTTP server on port", zap.String("port", port))
+
+	if err := app.Listen(":" + port); err != nil {
+		logger.Fatal("Failed to start HTTP server", zap.Error(err))
 	}
 }
 

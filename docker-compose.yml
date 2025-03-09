@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "50051:50051"
+      - "50052:50052"
     environment:
       - DB_HOST=user_service_db
       - DB_USER=devuser
@@ -16,6 +17,7 @@ services:
       - DB_SSLMODE=disable
       - DB_PORT=5555
       - GRPC_PORT=50051
+      - HTTP_PORT=50052
     depends_on:
       - user_service_db
 
@@ -43,6 +45,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "60051:60051"
+      - "60052:60052"
     environment:
       - DB_HOST=order_service_db
       - DB_USER=devuser
@@ -60,6 +63,7 @@ services:
       - KAFKA_BROKERS=kafka:9092
       - KAFKA_ORDER_TOPIC=order-events
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - HTTP_PORT=60052
     depends_on:
       - order_service_db
       - user-service
@@ -192,19 +196,16 @@ services:
     build:
       context: ./api-gateway
       dockerfile: Dockerfile
+    container_name: krakend
     ports:
-      - "10051:10051"
+      - "9001:8080"
     environment:
-      - PORT=10051
-      - ORDER_SERVICE_URL=http://order-service:60051
-      - NOTIFICATION_SERVICE_URL=http://notification-service:20051
-      - INVENTORY_SERVICE_URL=http://inventory-service:30051
-      - USER_SERVICE_URL=http://user-service:50051
-    depends_on:
-      - order-service
-      - notification-service
-      - inventory-service
-      - user-service
+      - KRAKEND_TIMEOUT=500ms
+      - KRAKEND_NAME=Custom Order Gateway
+      - ORDER_SERVICE_URL=http://order-service:60052
+      - USER_SERVICE_URL=http://user-service:50052
+    volumes:
+      - ./api-gateway/krakend.json.tpl:/etc/krakend/krakend.json.tpl
 
 volumes:
   user_service_data:

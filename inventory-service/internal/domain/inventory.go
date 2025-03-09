@@ -17,7 +17,7 @@ type Product struct {
 }
 
 func NewProduct(name string, quantity int, price float64) *Product {
-	now := time.Now()
+	now := time.Now().UTC()
 	return &Product{
 		ID:        uuid.NewString(),
 		Name:      name,
@@ -36,6 +36,6 @@ func (p *Product) AdjustStock(change int) error {
 		return ErrInsufficientStock
 	}
 	p.Quantity = newQty
-	p.UpdatedAt = time.Now()
+	p.UpdatedAt = time.Now().UTC()
 	return nil
 }

@@ -1,6 +1,8 @@
 package fiber_http
 
 import (
+	"strings"
+
 	"order-service/internal/adapters/models"
 	"order-service/internal/domain"
 	"order-service/internal/domain/interfaces"
@@ -50,7 +52,6 @@ func (h *OrderHTTPHandler) CreateOrder(c *fiber.Ctx) error {
 		orderItem := domain.NewOrderItem(item.ProductID, item.Quantity)
 		orderItems = append(orderItems, orderItem)
 	}
-
 	order.Items = orderItems
 
 	ctx := c.UserContext()
@@ -58,6 +59,14 @@ func (h *OrderHTTPHandler) CreateOrder(c *fiber.Ctx) error {
 	createdOrder, err := h.orderUseCase.CreateOrderWithItems(ctx, order, orderItems)
 	if err != nil {
 		h.logger.Error("CreateOrderWithItems failed", zap.Error(err))
+		if strings.Contains(err.Error(), "record not found") {
+			h.logger.Error("user not found")
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "user not found",
+			})
+		}
+
+		h.logger.Error("failed to create order", zap.Error(err))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 		})

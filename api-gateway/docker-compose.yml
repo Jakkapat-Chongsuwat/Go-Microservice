@@ -3,11 +3,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: krakend
     ports:
-      - "10051:10051"
+      - "9001:8080"
     environment:
-      - PORT=10051
-      - ORDER_SERVICE_URL=http://localhost:60051
-      - NOTIFICATION_SERVICE_URL=http://localhost:20051
-      - INVENTORY_SERVICE_URL=http://localhost:30051
-      - USER_SERVICE_URL=http://localhost:50051
+      - KRAKEND_TIMEOUT=500ms
+      - KRAKEND_NAME=Custom Order Gateway
+      - ORDER_SERVICE_URL=http://localhost:60052
+      - USER_SERVICE_URL=http://localhost:50052
+    volumes:
+      - ./api-gateway/krakend.json.tpl:/etc/krakend/krakend.json.tpl
