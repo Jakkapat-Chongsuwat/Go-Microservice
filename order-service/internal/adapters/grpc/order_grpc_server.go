@@ -2,7 +2,8 @@ package grpc
 
 import (
 	"context"
-	"order-service/internal/domain"
+	"order-service/internal/adapters/mappers"
+	"order-service/internal/adapters/models"
 	"order-service/internal/domain/interfaces"
 
 	"github.com/jakkapat-chongsuwat/go-microservice/proto/order_service"
@@ -25,28 +26,22 @@ func NewOrderGRPCServer(orderUC interfaces.IOrderUseCase, logger *zap.Logger) *O
 func (s *OrderGRPCServer) CreateOrder(ctx context.Context, req *order_service.CreateOrderRequest) (*order_service.CreateOrderResponse, error) {
 	s.logger.Info("Received CreateOrder request", zap.String("userID", req.UserId))
 
-	dOrder := domain.NewOrder(req.UserId)
-
-	dItems := make([]*domain.OrderItem, 0, len(req.Items))
-	for _, it := range req.Items {
-		dItem := domain.NewOrderItem(it.ProductId, int(it.Quantity))
-		dItems = append(dItems, dItem)
+	var itemReqs []models.OrderItemRequest
+	for _, protoItem := range req.Items {
+		itemReq := mappers.ProtoOrderItemToModel(protoItem)
+		itemReqs = append(itemReqs, itemReq)
 	}
 
-	dOrder.Items = dItems
-
-	createdOrder, err := s.orderUseCase.CreateOrderWithItems(ctx, dOrder, dItems)
+	createdOrder, err := s.orderUseCase.CreateOrder(ctx, req.UserId, itemReqs)
 	if err != nil {
-		s.logger.Error("CreateOrderWithItems failed", zap.Error(err))
+		s.logger.Error("CreateOrder failed", zap.Error(err))
 		return nil, err
 	}
 
-	protoItems := make([]*order_service.OrderItem, 0, len(createdOrder.Items))
+	var protoItems []*order_service.OrderItem
 	for _, di := range createdOrder.Items {
-		protoItems = append(protoItems, &order_service.OrderItem{
-			ProductId: di.ProductID,
-			Quantity:  int32(di.Quantity),
-		})
+		protoItem := mappers.DomainOrderItemToProto(*di)
+		protoItems = append(protoItems, protoItem)
 	}
 
 	resp := &order_service.CreateOrderResponse{
@@ -68,12 +63,10 @@ func (s *OrderGRPCServer) GetOrder(ctx context.Context, req *order_service.GetOr
 		return nil, err
 	}
 
-	protoItems := make([]*order_service.OrderItem, 0, len(dOrder.Items))
+	var protoItems []*order_service.OrderItem
 	for _, di := range dOrder.Items {
-		protoItems = append(protoItems, &order_service.OrderItem{
-			ProductId: di.ProductID,
-			Quantity:  int32(di.Quantity),
-		})
+		protoItem := mappers.DomainOrderItemToProto(*di)
+		protoItems = append(protoItems, protoItem)
 	}
 
 	pbOrder := &order_service.Order{

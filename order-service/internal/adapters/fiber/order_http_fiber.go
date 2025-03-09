@@ -3,8 +3,8 @@ package fiber_http
 import (
 	"strings"
 
+	"order-service/internal/adapters/mappers"
 	"order-service/internal/adapters/models"
-	"order-service/internal/domain"
 	"order-service/internal/domain/interfaces"
 
 	"github.com/gofiber/fiber/v2"
@@ -40,23 +40,22 @@ func (h *OrderHTTPHandler) CreateOrder(c *fiber.Ctx) error {
 		})
 	}
 
-	order := domain.NewOrder(req.UserID)
-
-	var orderItems []*domain.OrderItem
-	for _, item := range req.Items {
-		if item.ProductID == "" || item.Quantity <= 0 {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "invalid item data",
-			})
-		}
-		orderItem := domain.NewOrderItem(item.ProductID, item.Quantity)
-		orderItems = append(orderItems, orderItem)
+	if len(req.Items) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "at least one order item is required",
+		})
 	}
-	order.Items = orderItems
+
+	order, items, err := mappers.HTTPCreateOrderRequestToDomain(req)
+	if err != nil {
+		h.logger.Error("mapping failed", zap.Error(err))
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
 
 	ctx := c.UserContext()
-
-	createdOrder, err := h.orderUseCase.CreateOrderWithItems(ctx, order, orderItems)
+	createdOrder, err := h.orderUseCase.CreateOrderWithItems(ctx, order, items)
 	if err != nil {
 		h.logger.Error("CreateOrderWithItems failed", zap.Error(err))
 		if strings.Contains(err.Error(), "record not found") {
@@ -65,7 +64,6 @@ func (h *OrderHTTPHandler) CreateOrder(c *fiber.Ctx) error {
 				"error": "user not found",
 			})
 		}
-
 		h.logger.Error("failed to create order", zap.Error(err))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),

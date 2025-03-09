@@ -45,6 +45,22 @@ func NewOrderUsecase(
 	}
 }
 
+func (o *OrderUseCaseImpl) CreateOrder(ctx context.Context, userID string, itemsReq []models.OrderItemRequest) (*domain.Order, error) {
+	order := domain.NewOrder(userID)
+	var items []*domain.OrderItem
+
+	for _, req := range itemsReq {
+		if req.ProductID == "" || req.Quantity <= 0 {
+			return nil, fmt.Errorf("invalid order item data")
+		}
+		item := domain.NewOrderItem(req.ProductID, req.Quantity)
+		items = append(items, item)
+	}
+	order.Items = items
+
+	return o.CreateOrderWithItems(ctx, order, items)
+}
+
 // test uncle bob style
 func (o *OrderUseCaseImpl) CreateOrderWithItems(ctx context.Context, order *domain.Order, items []*domain.OrderItem) (*domain.Order, error) {
 	o.logger.Info("CreateOrderWithItems called", zap.String("userID", order.UserID))
