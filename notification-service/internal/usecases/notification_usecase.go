@@ -48,6 +48,7 @@ func (uc *notificationUseCaseImpl) ProcessNotification(ctx context.Context, noti
 
 	if err := uc.publisher.PublishNotification(notif); err != nil {
 		uc.logger.Error("failed to publish notification", zap.Error(err))
+		return fmt.Errorf("publish error: %w", err)
 	}
 
 	return nil

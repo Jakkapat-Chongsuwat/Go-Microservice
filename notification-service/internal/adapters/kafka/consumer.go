@@ -10,7 +10,7 @@ import (
 	"sync"
 	"syscall"
 
-	"notification-service/internal/domain"
+	mappers "notification-service/internal/adapters/mapper"
 	"notification-service/internal/usecases"
 
 	"github.com/IBM/sarama"
@@ -50,6 +50,9 @@ func NewKafkaConsumerGroup(brokers []string, groupID, topic, schemaRegistryURL s
 }
 
 func (kc *KafkaConsumerGroup) Start(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	consumer := consumerGroupHandler{
 		useCase:  kc.useCase,
 		logger:   kc.logger,
@@ -63,11 +66,14 @@ func (kc *KafkaConsumerGroup) Start(ctx context.Context) error {
 	go func() {
 		defer wg.Done()
 		for {
-			if err := kc.group.Consume(ctx, []string{kc.topic}, &consumer); err != nil {
-				kc.logger.Error("error during consuming", zap.Error(err))
-			}
 			if ctx.Err() != nil {
 				return
+			}
+			if err := kc.group.Consume(ctx, []string{kc.topic}, &consumer); err != nil {
+				if ctx.Err() != nil {
+					return
+				}
+				kc.logger.Error("error during consuming", zap.Error(err))
 			}
 		}
 	}()
@@ -79,6 +85,7 @@ func (kc *KafkaConsumerGroup) Start(ctx context.Context) error {
 		kc.logger.Info("context cancelled")
 	case <-sigterm:
 		kc.logger.Info("termination signal received")
+		cancel()
 	}
 
 	if err := kc.group.Close(); err != nil {
@@ -120,7 +127,12 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 			continue
 		}
 
-		notif := domain.NewNotificationWithID(fmt.Sprintf("%v", notifMap["id"]), fmt.Sprintf("%v", notifMap["type"]), fmt.Sprintf("%v", notifMap["message"]))
+		notif, err := mappers.MapRawToNotification(notifMap)
+		if err != nil {
+			h.logger.Error("failed to map raw event to notification", zap.Error(err))
+			session.MarkMessage(msg, "")
+			continue
+		}
 
 		if err := h.useCase.ProcessNotification(session.Context(), notif); err != nil {
 			h.logger.Error("failed to process notification", zap.Error(err))
@@ -130,7 +142,8 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 	return nil
 }
 
-// Format: [magic byte (0)] + [4-byte schema ID] + [Avro payload].
+// decodeAvroMessage decodes a message in Confluent's wire format:
+// [magic byte (0)] + [4-byte schema ID] + [Avro payload].
 func decodeAvroMessage(srClient *srclient.SchemaRegistryClient, data []byte) (map[string]interface{}, error) {
 	if len(data) < 5 {
 		return nil, fmt.Errorf("data too short")

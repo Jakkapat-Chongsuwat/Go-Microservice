@@ -21,5 +21,5 @@ type IOrderRepository interface {
 }
 
 type IOrderEventProducer interface {
-	SendOrderEvent(event models.OrderEvent) error
+	SendOrderEvent(event domain.OrderEvent) error
 }

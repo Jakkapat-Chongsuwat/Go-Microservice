@@ -13,6 +13,7 @@ func LoadSchema(relativePath string) {
 	if err != nil {
 		log.Fatalf("failed to get working directory: %v", err)
 	}
+	log.Println("Working Directory:", wd)
 	fullPath := filepath.Join(wd, relativePath)
 	data, err := os.ReadFile(fullPath)
 	if err != nil {

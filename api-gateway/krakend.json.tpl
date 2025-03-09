@@ -56,6 +56,57 @@
           }
         }
       ]
+    },
+    {
+      "endpoint": "/products",
+      "method": "POST",
+      "backend": [
+        {
+          "host": [
+            "$INVENTORY_SERVICE_URL"
+          ],
+          "url_pattern": "/api/products",
+          "extra_config": {
+            "backend/http": {
+              "return_error_code": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/products/{id}",
+      "method": "GET",
+      "backend": [
+        {
+          "host": [
+            "$INVENTORY_SERVICE_URL"
+          ],
+          "url_pattern": "/api/products/{id}",
+          "extra_config": {
+            "backend/http": {
+              "return_error_code": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/products",
+      "method": "GET",
+      "backend": [
+        {
+          "host": [
+            "$INVENTORY_SERVICE_URL"
+          ],
+          "url_pattern": "/api/products",
+          "extra_config": {
+            "backend/http": {
+              "return_error_code": true
+            }
+          }
+        }
+      ]
     }
   ]
 }

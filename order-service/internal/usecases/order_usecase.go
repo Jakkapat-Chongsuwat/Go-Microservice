@@ -108,7 +108,7 @@ func (o *OrderUseCaseImpl) persistOrder(ctx context.Context, order *domain.Order
 }
 
 func (o *OrderUseCaseImpl) publishOrderEvent(order *domain.Order) {
-	event := models.OrderEvent{
+	event := domain.OrderEvent{
 		OrderID:   order.ID,
 		EventType: "CREATED",
 		Timestamp: domain.Clock.Now(),

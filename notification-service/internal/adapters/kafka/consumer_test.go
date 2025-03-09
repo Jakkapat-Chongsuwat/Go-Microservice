@@ -1,4 +1,4 @@
-package kafka_test
+package kafka
 
 import (
 	"bytes"
@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"notification-service/internal/adapters/kafka"
 	"notification-service/internal/domain"
 
 	"github.com/IBM/sarama"
@@ -46,10 +45,7 @@ func TestConsumerIntegration(t *testing.T) {
 	ctx := context.Background()
 	logger, _ := zap.NewDevelopment()
 
-	net, err := network.New(
-		ctx,
-		network.WithDriver("bridge"),
-	)
+	net, err := network.New(ctx, network.WithDriver("bridge"))
 	require.NoError(t, err)
 	defer net.Remove(ctx)
 
@@ -73,16 +69,12 @@ func TestConsumerIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	logReader, err := kafkaC.Logs(ctx)
-	if err != nil {
-		logger.Error("failed to retrieve Kafka logs", zap.Error(err))
-	} else {
+	if err == nil {
 		defer logReader.Close()
 		buf := new(bytes.Buffer)
 		_, err := io.Copy(buf, logReader)
 		if err == nil {
 			logger.Info("Kafka container logs", zap.String("logs", buf.String()))
-		} else {
-			logger.Error("failed to read Kafka logs", zap.Error(err))
 		}
 	}
 
@@ -116,7 +108,8 @@ func TestConsumerIntegration(t *testing.T) {
 	schemaRegistryURL := fmt.Sprintf("http://%s:%s", srHost, srPort.Port())
 
 	fakeUC := &fakeNotificationUseCase{}
-	consumerGroup, err := kafka.NewKafkaConsumerGroup(brokers, "test-group", "test-topic", schemaRegistryURL, fakeUC, logger)
+
+	consumerGroup, err := NewKafkaConsumerGroup(brokers, "test-group", "test-topic", schemaRegistryURL, fakeUC, logger)
 	require.NoError(t, err)
 
 	srClient := srclient.NewSchemaRegistryClient(schemaRegistryURL)
@@ -125,7 +118,7 @@ func TestConsumerIntegration(t *testing.T) {
     {
       "type": "record",
       "name": "Notification",
-      "namespace": "com.example.notifi cation",
+      "namespace": "com.example.notification",
       "fields": [
         { "name": "id", "type": "string" },
         { "name": "type", "type": "string" },
@@ -147,12 +140,12 @@ func TestConsumerIntegration(t *testing.T) {
 	binaryData, err := codec.BinaryFromNative(nil, native)
 	require.NoError(t, err)
 
-	var buf bytes.Buffer
-	buf.WriteByte(0)
-	err = binary.Write(&buf, binary.BigEndian, int32(schemaID))
+	var b bytes.Buffer
+	b.WriteByte(0)
+	err = binary.Write(&b, binary.BigEndian, int32(schemaID))
 	require.NoError(t, err)
-	buf.Write(binaryData)
-	messageBytes := buf.Bytes()
+	b.Write(binaryData)
+	messageBytes := b.Bytes()
 
 	producer, err := sarama.NewSyncProducer(brokers, nil)
 	require.NoError(t, err)

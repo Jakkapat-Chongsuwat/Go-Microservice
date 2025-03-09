@@ -99,11 +99,12 @@ services:
       - DB_PASS=devpass
       - DB_PORT=5557
       - DB_NAME=inventory_service
-      - DB_SCHEMA=inventory_service
+      - DB_SCHEMA=public
       - DB_SSLMODE=disable
       - DB_DRIVER=postgres
       - REPO_TYPE=gorm
       - GRPC_PORT=30051
+      - HTTP_PORT=30052
     depends_on:
       - inventory_service_db
 
@@ -135,7 +136,7 @@ services:
       - KAFKA_PORT=9092
       - KAFKA_BROKERS=kafka:9092
       - KAFKA_GROUP_ID=notification-service-group
-      - KAFKA_TOPIC=notifications
+      - KAFKA_TOPIC=order-events
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
       - GRPC_PORT=20051
     depends_on:
@@ -163,7 +164,7 @@ services:
     volumes:
       - kafka_data:/bitnami/kafka
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9092"]
+      test: ["CMD", "nc", "-z", "localhost", "9092"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -180,18 +181,6 @@ services:
       - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=PLAINTEXT://kafka:9092
       - SCHEMA_REGISTRY_LISTENERS=http://0.0.0.0:8081
 
-  kafdrop:
-    image: obsidiandynamics/kafdrop
-    container_name: kafdrop
-    depends_on:
-      - kafka
-    ports:
-      - "9000:9000"
-    environment:
-      - KAFKA_BROKERCONNECT=kafka:9092
-      - JVM_OPTS=-Xms32M -Xmx64M
-      - SERVER_PORT=9000
-
   api-gateway:
     build:
       context: ./api-gateway
@@ -204,6 +193,7 @@ services:
       - KRAKEND_NAME=Custom Order Gateway
       - ORDER_SERVICE_URL=http://order-service:60052
       - USER_SERVICE_URL=http://user-service:50052
+      - INVENTORY_SERVICE_URL=http://inventory-service:30052
     volumes:
       - ./api-gateway/krakend.json.tpl:/etc/krakend/krakend.json.tpl
 

@@ -11,5 +11,6 @@ services:
       - KRAKEND_NAME=Custom Order Gateway
       - ORDER_SERVICE_URL=http://localhost:60052
       - USER_SERVICE_URL=http://localhost:50052
+      - INVENTORY_SERVICE_URL=http://localhost:40052
     volumes:
       - ./api-gateway/krakend.json.tpl:/etc/krakend/krakend.json.tpl

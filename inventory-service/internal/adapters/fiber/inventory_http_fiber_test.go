@@ -9,14 +9,16 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"inventory-service/internal/adapters/models"
+	"inventory-service/internal/domain"
+	"inventory-service/internal/usecases"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
-
-	"inventory-service/internal/domain"
-	"inventory-service/internal/usecases"
 )
 
+// FakeInventoryUseCase implements the InventoryUseCase interface for testing.
 type FakeInventoryUseCase struct {
 	CreateProductFunc              func(ctx context.Context, product *domain.Product) (*domain.Product, error)
 	GetProductFunc                 func(ctx context.Context, productID string) (*domain.Product, error)
@@ -59,7 +61,7 @@ func TestCreateProduct_Success(t *testing.T) {
 	handler := NewInventoryHTTPHandler(fakeUC, logger)
 	RegisterInventoryRoutes(app, handler)
 
-	reqPayload := CreateProductRequest{
+	reqPayload := models.CreateProductRequest{
 		Name:     "Widget",
 		Quantity: 100,
 		Price:    9.99,
@@ -73,13 +75,13 @@ func TestCreateProduct_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-	var product domain.Product
-	err = json.NewDecoder(resp.Body).Decode(&product)
+	var productResp models.ProductResponse
+	err = json.NewDecoder(resp.Body).Decode(&productResp)
 	assert.NoError(t, err)
-	assert.Equal(t, "prod123", product.ID)
-	assert.Equal(t, reqPayload.Name, product.Name)
-	assert.Equal(t, reqPayload.Quantity, product.Quantity)
-	assert.Equal(t, reqPayload.Price, product.Price)
+	assert.Equal(t, "prod123", productResp.ID)
+	assert.Equal(t, reqPayload.Name, productResp.Name)
+	assert.Equal(t, reqPayload.Quantity, productResp.Quantity)
+	assert.Equal(t, reqPayload.Price, productResp.Price)
 }
 
 func TestCreateProduct_InvalidPayload(t *testing.T) {
@@ -121,11 +123,11 @@ func TestGetProduct_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var product domain.Product
-	err = json.NewDecoder(resp.Body).Decode(&product)
+	var productResp models.ProductResponse
+	err = json.NewDecoder(resp.Body).Decode(&productResp)
 	assert.NoError(t, err)
-	assert.Equal(t, "prod123", product.ID)
-	assert.Equal(t, "Widget", product.Name)
+	assert.Equal(t, "prod123", productResp.ID)
+	assert.Equal(t, "Widget", productResp.Name)
 }
 
 func TestGetProduct_NotFound(t *testing.T) {
@@ -164,7 +166,7 @@ func TestUpdateProductMetadata_Success(t *testing.T) {
 	handler := NewInventoryHTTPHandler(fakeUC, logger)
 	RegisterInventoryRoutes(app, handler)
 
-	reqPayload := UpdateProductMetadataRequest{
+	reqPayload := models.UpdateProductMetadataRequest{
 		Name:  "Updated Widget",
 		Price: 12.99,
 	}
@@ -177,12 +179,12 @@ func TestUpdateProductMetadata_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var updatedProduct domain.Product
-	err = json.NewDecoder(resp.Body).Decode(&updatedProduct)
+	var updatedResp models.ProductResponse
+	err = json.NewDecoder(resp.Body).Decode(&updatedResp)
 	assert.NoError(t, err)
-	assert.Equal(t, "prod123", updatedProduct.ID)
-	assert.Equal(t, reqPayload.Name, updatedProduct.Name)
-	assert.Equal(t, reqPayload.Price, updatedProduct.Price)
+	assert.Equal(t, "prod123", updatedResp.ID)
+	assert.Equal(t, reqPayload.Name, updatedResp.Name)
+	assert.Equal(t, reqPayload.Price, updatedResp.Price)
 }
 
 func TestUpdateProductMetadata_Failure(t *testing.T) {
@@ -204,7 +206,7 @@ func TestUpdateProductMetadata_Failure(t *testing.T) {
 	handler := NewInventoryHTTPHandler(fakeUC, logger)
 	RegisterInventoryRoutes(app, handler)
 
-	reqPayload := UpdateProductMetadataRequest{
+	reqPayload := models.UpdateProductMetadataRequest{
 		Name:  "Updated Widget",
 		Price: 12.99,
 	}
@@ -234,7 +236,7 @@ func TestUpdateProductStockQuantity_Success(t *testing.T) {
 	handler := NewInventoryHTTPHandler(fakeUC, logger)
 	RegisterInventoryRoutes(app, handler)
 
-	payload := UpdateProductStockQuantityRequest{
+	payload := models.UpdateProductStockQuantityRequest{
 		QuantityChange: -10,
 	}
 	body, err := json.Marshal(payload)
@@ -246,11 +248,11 @@ func TestUpdateProductStockQuantity_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var updatedProduct domain.Product
-	err = json.NewDecoder(resp.Body).Decode(&updatedProduct)
+	var updatedResp models.ProductResponse
+	err = json.NewDecoder(resp.Body).Decode(&updatedResp)
 	assert.NoError(t, err)
-	assert.Equal(t, "prod123", updatedProduct.ID)
-	assert.Equal(t, 90, updatedProduct.Quantity)
+	assert.Equal(t, "prod123", updatedResp.ID)
+	assert.Equal(t, 90, updatedResp.Quantity)
 }
 
 func TestUpdateProductStockQuantity_Failure(t *testing.T) {
@@ -264,7 +266,7 @@ func TestUpdateProductStockQuantity_Failure(t *testing.T) {
 	handler := NewInventoryHTTPHandler(fakeUC, logger)
 	RegisterInventoryRoutes(app, handler)
 
-	payload := UpdateProductStockQuantityRequest{
+	payload := models.UpdateProductStockQuantityRequest{
 		QuantityChange: -10,
 	}
 	body, err := json.Marshal(payload)
@@ -296,12 +298,12 @@ func TestListProducts_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var products []*domain.Product
-	err = json.NewDecoder(resp.Body).Decode(&products)
+	var productsResp []models.ProductResponse
+	err = json.NewDecoder(resp.Body).Decode(&productsResp)
 	assert.NoError(t, err)
-	assert.Len(t, products, 2)
-	assert.Equal(t, "prod1", products[0].ID)
-	assert.Equal(t, "prod2", products[1].ID)
+	assert.Len(t, productsResp, 2)
+	assert.Equal(t, "prod1", productsResp[0].ID)
+	assert.Equal(t, "prod2", productsResp[1].ID)
 }
 
 func TestListProducts_Failure(t *testing.T) {

@@ -6,10 +6,12 @@ import (
 	"os"
 	"time"
 
+	fiber_http "inventory-service/internal/adapters/fiber"
 	inventoryGrpc "inventory-service/internal/adapters/grpc"
 	"inventory-service/internal/adapters/repository"
 	"inventory-service/internal/usecases"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 	"gorm.io/driver/mysql"
@@ -24,9 +26,10 @@ func main() {
 	defer logger.Sync()
 
 	inventoryRepo := buildRepository(logger)
-
 	inventoryUseCase := usecases.NewInventoryUsecase(inventoryRepo, logger)
-	startGRPC(logger, inventoryUseCase)
+
+	go startGRPC(logger, inventoryUseCase)
+	startHTTP(logger, inventoryUseCase)
 }
 
 func loadEnv() {
@@ -77,7 +80,7 @@ func connectPostgres(logger *zap.Logger) (*gorm.DB, error) {
 	user := getEnv("DB_USER", "devuser")
 	pass := getEnv("DB_PASS", "devpass")
 	dbname := getEnv("DB_NAME", "inventory_service")
-	dbschema := getEnv("DB_SCHEMA", "inventory_service")
+	dbschema := getEnv("DB_SCHEMA", "public")
 	sslmode := getEnv("DB_SSLMODE", "disable")
 
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s search_path=%s",
@@ -114,6 +117,18 @@ func startGRPC(logger *zap.Logger, uc usecases.InventoryUseCase) {
 	port := getEnv("GRPC_PORT", "30051")
 	if err := inventoryGrpc.StartGRPCServer(port, uc, logger); err != nil {
 		logger.Fatal("failed to start gRPC server", zap.Error(err))
+	}
+}
+
+func startHTTP(logger *zap.Logger, uc usecases.InventoryUseCase) {
+	app := fiber.New()
+	handler := fiber_http.NewInventoryHTTPHandler(uc, logger)
+	fiber_http.RegisterInventoryRoutes(app, handler)
+
+	port := getEnv("HTTP_PORT", "30052")
+	logger.Info("Starting Inventory HTTP server", zap.String("port", port))
+	if err := app.Listen(":" + port); err != nil {
+		logger.Fatal("failed to start HTTP server", zap.Error(err))
 	}
 }
 
