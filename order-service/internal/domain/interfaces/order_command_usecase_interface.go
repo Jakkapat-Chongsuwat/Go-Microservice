@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	"context"
+	"order-service/internal/adapters/models"
 	"order-service/internal/domain"
 )
 
@@ -19,5 +20,5 @@ type IOrderRepository interface {
 }
 
 type IOrderEventProducer interface {
-	SendOrderEvent(event domain.OrderEvent) error
+	SendOrderEvent(event models.OrderEvent) error
 }

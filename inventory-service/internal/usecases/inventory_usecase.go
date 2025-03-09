@@ -3,7 +3,6 @@ package usecases
 import (
 	"context"
 	"inventory-service/internal/domain"
-	"time"
 
 	"go.uber.org/zap"
 )
@@ -57,7 +56,7 @@ func (i *InventoryUseCaseImpl) UpdateProductMetadata(ctx context.Context, produc
 	}
 	existingProduct.Name = product.Name
 	existingProduct.Price = product.Price
-	existingProduct.UpdatedAt = time.Now().UTC()
+	existingProduct.UpdatedAt = domain.Clock.Now()
 	return i.inventoryRepo.UpdateProduct(ctx, existingProduct)
 }
 

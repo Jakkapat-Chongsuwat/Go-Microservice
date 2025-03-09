@@ -5,6 +5,7 @@ import (
 	"errors"
 	"inventory-service/internal/domain"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -47,6 +48,14 @@ func (m *MockInventoryRepository) ListProducts(ctx context.Context) ([]*domain.P
 		return p, args.Error(1)
 	}
 	return nil, args.Error(1)
+}
+
+type FakeClock struct {
+	fixedTime time.Time
+}
+
+func (fc FakeClock) Now() time.Time {
+	return fc.fixedTime
 }
 
 // --- Test Cases ---
@@ -120,6 +129,11 @@ func TestInventoryUseCaseImpl_GetProduct_Error(t *testing.T) {
 }
 
 func TestInventoryUseCaseImpl_UpdateProductMetadata(t *testing.T) {
+	fixedTime := time.Date(2020, time.January, 1, 12, 0, 0, 0, time.UTC)
+	oldClock := domain.Clock
+	domain.Clock = FakeClock{fixedTime: fixedTime}
+	defer func() { domain.Clock = oldClock }()
+
 	ctx := context.Background()
 	originalProduct := domain.NewProduct("Product 1", 100, 9.99)
 	updatedMetadata := domain.NewProduct("Updated Product", originalProduct.Quantity, 19.99)
@@ -131,7 +145,8 @@ func TestInventoryUseCaseImpl_UpdateProductMetadata(t *testing.T) {
 		return prod.ID == originalProduct.ID &&
 			prod.Name == "Updated Product" &&
 			prod.Price == 19.99 &&
-			prod.Quantity == originalProduct.Quantity
+			prod.Quantity == originalProduct.Quantity &&
+			prod.UpdatedAt.Equal(fixedTime)
 	})).Return(updatedMetadata, nil)
 
 	logger := zap.NewNop()
@@ -142,6 +157,7 @@ func TestInventoryUseCaseImpl_UpdateProductMetadata(t *testing.T) {
 	assert.Equal(t, "Updated Product", result.Name)
 	assert.Equal(t, 19.99, result.Price)
 	assert.Equal(t, originalProduct.Quantity, result.Quantity)
+	assert.True(t, result.UpdatedAt.Equal(fixedTime))
 	mockRepo.AssertExpectations(t)
 }
 

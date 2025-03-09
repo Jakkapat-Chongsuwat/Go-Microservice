@@ -8,7 +8,6 @@ import (
 	"io"
 	"order-service/internal/adapters/kafka"
 	"order-service/internal/adapters/models"
-	"order-service/internal/domain"
 	"testing"
 	"time"
 
@@ -106,7 +105,7 @@ func TestProducerIntegration(t *testing.T) {
 	require.NoError(t, err)
 	defer producer.Close()
 
-	event := domain.OrderEvent{
+	event := models.OrderEvent{
 		OrderID:   "test-order-1",
 		EventType: "CREATED",
 		Timestamp: time.Now(),

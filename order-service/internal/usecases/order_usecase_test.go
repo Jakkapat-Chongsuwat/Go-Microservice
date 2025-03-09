@@ -3,6 +3,7 @@ package usecases
 import (
 	"context"
 	"errors"
+	"order-service/internal/adapters/models"
 	"order-service/internal/domain"
 	"testing"
 
@@ -69,7 +70,7 @@ type MockOrderEventProducer struct {
 	mock.Mock
 }
 
-func (m *MockOrderEventProducer) SendOrderEvent(event domain.OrderEvent) error {
+func (m *MockOrderEventProducer) SendOrderEvent(event models.OrderEvent) error {
 	args := m.Called(event)
 	return args.Error(0)
 }

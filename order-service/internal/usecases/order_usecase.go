@@ -3,10 +3,10 @@ package usecases
 import (
 	"context"
 	"fmt"
+	"order-service/internal/adapters/models"
 	"order-service/internal/domain"
 	"order-service/internal/domain/interfaces"
 	"sync"
-	"time"
 
 	"go.uber.org/zap"
 )
@@ -49,6 +49,12 @@ func NewOrderUsecase(
 func (o *OrderUseCaseImpl) CreateOrderWithItems(ctx context.Context, order *domain.Order, items []*domain.OrderItem) (*domain.Order, error) {
 	o.logger.Info("CreateOrderWithItems called", zap.String("userID", order.UserID))
 
+	now := domain.Clock.Now()
+	if order.CreatedAt.IsZero() {
+		order.CreatedAt = now
+	}
+	order.UpdatedAt = now
+
 	if err := o.verifyUser(ctx, order.UserID); err != nil {
 		return nil, fmt.Errorf("failed to verify user: %w", err)
 	}
@@ -86,10 +92,10 @@ func (o *OrderUseCaseImpl) persistOrder(ctx context.Context, order *domain.Order
 }
 
 func (o *OrderUseCaseImpl) publishOrderEvent(order *domain.Order) {
-	event := domain.OrderEvent{
+	event := models.OrderEvent{
 		OrderID:   order.ID,
 		EventType: "CREATED",
-		Timestamp: time.Now(),
+		Timestamp: domain.Clock.Now(),
 	}
 	if err := o.orderEventProducer.SendOrderEvent(event); err != nil {
 		o.logger.Error("failed to send order event", zap.Error(err))

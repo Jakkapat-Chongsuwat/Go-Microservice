@@ -7,6 +7,18 @@ import (
 	"github.com/google/uuid"
 )
 
+type ClockInterface interface {
+	Now() time.Time
+}
+
+type RealClock struct{}
+
+func (RealClock) Now() time.Time {
+	return time.Now().UTC()
+}
+
+var Clock ClockInterface = RealClock{}
+
 type Product struct {
 	ID        string
 	Name      string
@@ -17,7 +29,7 @@ type Product struct {
 }
 
 func NewProduct(name string, quantity int, price float64) *Product {
-	now := time.Now().UTC()
+	now := Clock.Now()
 	return &Product{
 		ID:        uuid.NewString(),
 		Name:      name,
@@ -36,6 +48,6 @@ func (p *Product) AdjustStock(change int) error {
 		return ErrInsufficientStock
 	}
 	p.Quantity = newQty
-	p.UpdatedAt = time.Now().UTC()
+	p.UpdatedAt = Clock.Now()
 	return nil
 }

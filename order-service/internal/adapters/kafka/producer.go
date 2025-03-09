@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"order-service/internal/domain"
+	"order-service/internal/adapters/models"
 
 	"github.com/IBM/sarama"
 	"github.com/linkedin/goavro/v2"
@@ -52,7 +52,7 @@ func NewOrderEventProducer(brokers []string, topic, schemaRegistryURL, subject, 
 }
 
 // Message format: [magic byte (0)] + [4-byte schema ID] + [Avro payload]
-func (p *OrderEventProducer) SendOrderEvent(event domain.OrderEvent) error {
+func (p *OrderEventProducer) SendOrderEvent(event models.OrderEvent) error {
 	native := map[string]interface{}{
 		"order_id":   event.OrderID,
 		"event_type": event.EventType,
