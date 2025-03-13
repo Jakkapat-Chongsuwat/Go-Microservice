@@ -58,6 +58,23 @@
       ]
     },
     {
+      "endpoint": "/users",
+      "method": "GET",
+      "backend": [
+        {
+          "host": [
+            "$USER_SERVICE_URL"
+          ],
+          "url_pattern": "/api/users",
+          "extra_config": {
+            "backend/http": {
+              "return_error_code": true
+            }
+          }
+        }
+      ]
+    },
+    {
       "endpoint": "/products",
       "method": "POST",
       "backend": [

@@ -47,10 +47,44 @@ func (u *UserHTTPHandler) CreateUser(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(user)
+	response := models.UserResponse{
+		ID:       user.ID,
+		Username: user.Username,
+		Email:    user.Email,
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(response)
+}
+
+func (u *UserHTTPHandler) GetUsers(c *fiber.Ctx) error {
+	u.logger.Info("GetUsers endpoint called")
+
+	ctx := c.UserContext()
+	users, err := u.userUseCase.GetAllUsers(ctx)
+	if err != nil {
+		u.logger.Error("failed to get users", zap.Error(err))
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to get users",
+		})
+	}
+
+	var responses []models.UserResponse
+	for _, user := range users {
+		responses = append(responses, models.UserResponse{
+			ID:       user.ID,
+			Username: user.Username,
+			Email:    user.Email,
+		})
+	}
+
+	return c.JSON(models.NewResponse(
+		responses,
+		&models.Meta{Total: len(responses)},
+	))
 }
 
 func RegisterUserRoutes(app *fiber.App, userHandler *UserHTTPHandler) {
 	api := app.Group("/api")
 	api.Post("/users", userHandler.CreateUser)
+	api.Get("/users", userHandler.GetUsers)
 }

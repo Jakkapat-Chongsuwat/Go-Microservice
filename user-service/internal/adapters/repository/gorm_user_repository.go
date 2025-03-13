@@ -69,3 +69,26 @@ func (r *GormUserRepository) FindByID(ctx context.Context, id string) (*domain.U
 		Email:    dbUser.Email,
 	}, nil
 }
+
+func (r *GormUserRepository) FindAll(ctx context.Context) ([]*domain.User, error) {
+	var dbUsers []models.GormDBUser
+
+	err := r.db.WithContext(ctx).
+		Find(&dbUsers).
+		Error
+	if err != nil {
+		r.logger.Warn("GORM find all failed", zap.Error(err))
+		return nil, err
+	}
+
+	users := make([]*domain.User, 0, len(dbUsers))
+	for _, dbUser := range dbUsers {
+		users = append(users, &domain.User{
+			ID:       dbUser.ID,
+			Username: dbUser.Username,
+			Email:    dbUser.Email,
+		})
+	}
+
+	return users, nil
+}

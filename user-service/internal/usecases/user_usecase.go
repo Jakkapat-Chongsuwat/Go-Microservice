@@ -14,6 +14,7 @@ import (
 type UserRepository interface {
 	Save(ctx context.Context, user *domain.User) error
 	FindByID(ctx context.Context, id string) (*domain.User, error)
+	FindAll(ctx context.Context) ([]*domain.User, error)
 }
 
 type UserUseCase interface {
@@ -21,6 +22,7 @@ type UserUseCase interface {
 	GetUserInParallel(ctx context.Context, userIDs []string) ([]*domain.User, error)
 	GetUsersWithConcurrencyLimit(ctx context.Context, userIDs []string, maxWorkers int) ([]*domain.User, error)
 	GetUsersFailFast(ctx context.Context, userIDs []string, maxWorkers int) ([]*domain.User, error)
+	GetAllUsers(ctx context.Context) ([]*domain.User, error)
 }
 
 type UserUseCaseImpl struct {
@@ -182,4 +184,15 @@ func (u *UserUseCaseImpl) GetUsersFailFast(ctx context.Context, userIDs []string
 		return nil, firstErr
 	}
 	return results, nil
+}
+
+func (u *UserUseCaseImpl) GetAllUsers(ctx context.Context) ([]*domain.User, error) {
+	u.logger.Info("GetAllUsers called")
+	users, err := u.userRepo.FindAll(ctx)
+	if err != nil {
+		u.logger.Error("failed to get all users", zap.Error(err))
+		return nil, fmt.Errorf("failed to get all users: %w", err)
+	}
+	u.logger.Info("all users retrieved", zap.Int("count", len(users)))
+	return users, nil
 }

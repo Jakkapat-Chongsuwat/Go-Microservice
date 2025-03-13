@@ -40,6 +40,10 @@ func (f *FakeUserUseCase) GetUsersFailFast(ctx context.Context, userIDs []string
 	return nil, nil
 }
 
+func (f *FakeUserUseCase) GetAllUsers(ctx context.Context) ([]*domain.User, error) {
+	return nil, nil
+}
+
 func TestUserGRPCServer_CreateUser(t *testing.T) {
 	fakeUC := new(FakeUserUseCase)
 	logger, _ := zap.NewDevelopment()

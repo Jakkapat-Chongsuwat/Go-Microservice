@@ -38,3 +38,12 @@ func (r *InMemoryUserRepository) FindByID(ctx context.Context, id string) (*doma
 	r.logger.Debug("user retrieved", zap.String("id", id))
 	return user, nil
 }
+
+func (r *InMemoryUserRepository) FindAll(ctx context.Context) ([]*domain.User, error) {
+	users := make([]*domain.User, 0, len(r.store))
+	for _, user := range r.store {
+		users = append(users, user)
+	}
+	r.logger.Debug("all users retrieved", zap.Int("count", len(users)))
+	return users, nil
+}

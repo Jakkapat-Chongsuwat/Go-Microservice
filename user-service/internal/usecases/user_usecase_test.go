@@ -28,6 +28,14 @@ func (m *MockUserRepository) FindByID(ctx context.Context, id string) (*domain.U
 	return nil, args.Error(1)
 }
 
+func (m *MockUserRepository) FindAll(ctx context.Context) ([]*domain.User, error) {
+	args := m.Called(ctx)
+	if users, ok := args.Get(0).([]*domain.User); ok {
+		return users, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 var _ UserRepository = (*MockUserRepository)(nil)
 
 func TestUserUseCase(t *testing.T) {
