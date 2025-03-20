@@ -29,6 +29,6 @@ export class ListComponent implements OnInit {
   }
 
   userClicked() {
-    this._toast.show('User clicked');
+    this._toast.show('Products clicked');
   }
 }

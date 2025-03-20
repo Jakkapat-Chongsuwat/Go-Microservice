@@ -1,9 +1,12 @@
 import { z } from 'zod';
+import { BaseResponseSchema } from './base.dto';
 
-export const UserResponseSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
+export const UserSchema = z.object({
+  id: z.string(),
+  username: z.string(),
   email: z.string().email(),
 });
 
-export type UserResponseDto = z.infer<typeof UserResponseSchema>;
+export const UsersResponseSchema = BaseResponseSchema(z.array(UserSchema));
+
+export type UsersResponseDto = z.infer<typeof UsersResponseSchema>;

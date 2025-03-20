@@ -128,7 +128,12 @@ func (h *InventoryHTTPHandler) ListProducts(c *fiber.Ctx) error {
 	for _, product := range products {
 		dtos = append(dtos, mappers.MapProductToProductResponse(product))
 	}
-	return c.JSON(dtos)
+
+	var res = models.NewResponse(dtos, &models.Meta{
+		Total: len(dtos),
+	})
+
+	return c.JSON(res)
 }
 
 func RegisterInventoryRoutes(app *fiber.App, handler *InventoryHTTPHandler) {

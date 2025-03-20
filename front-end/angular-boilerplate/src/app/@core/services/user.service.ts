@@ -10,7 +10,7 @@ export class UserService {
 
   constructor(private http: HttpClient) {}
 
-  getUsers(): Observable<any[]> {
-    return this.http.get<any[]>(this.apiUrl);
+  getUsers(): Observable<any> {
+    return this.http.get<any>(this.apiUrl);
   }
 }

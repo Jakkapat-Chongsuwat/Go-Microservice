@@ -5,6 +5,25 @@
   "timeout": "3s",
   "cache_ttl": "300s",
   "output_encoding": "json",
+  "extra_config": {
+    "router": {
+      "auto_options": true
+    },
+    "security/cors": {
+      "allow_origins": ["*"],
+      "allow_methods": ["GET", "HEAD", "POST", "OPTIONS"],
+      "expose_headers": ["Content-Length", "Content-Type"],
+      "allow_headers": [
+          "Accept-Language",
+          "Authorization",
+          "Content-Type",
+          "lang"
+      ],
+      "max_age": "12h",
+      "allow_credentials": false,
+      "debug": true
+    }
+  },
   "endpoints": [
     {
       "endpoint": "/orders",
