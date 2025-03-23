@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { UseUser } from '@core/usecases/useUser';
 import { UserEntity } from '@core/entities/user.entity';
-import { HotToastService } from '@ngneat/hot-toast';
+import { HotToastService } from '@ngxpert/hot-toast';
 
 @Component({
   selector: 'app-list',

@@ -29,14 +29,14 @@
     "@angular/platform-browser-dynamic": "^19.0.5",
     "@angular/router": "^19.0.5",
     "@angular/service-worker": "^19.0.5",
-    "@ngneat/hot-toast": "7",
-    "@ngneat/overview": "6.0.0",
+    "@ngneat/overview": "6.1.1",
     "@ngneat/until-destroy": "^10.0.0",
     "@ngx-translate/core": "^15.0.0",
     "@ngx-translate/http-loader": "^8.0.0",
-    "@ngxpert/hot-toast": "3.0.2",
+    "@ngxpert/hot-toast": "^4.1.2",
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.3",
+    "ngx-logger": "^5.0.12",
     "rxjs": "~7.8.0",
     "sanitize.css": "^13.0.0",
     "socket.io-client": "^4.8.0",
@@ -84,6 +84,9 @@
     "ts-node": "^10.9.2",
     "typescript": "~5.5.2",
     "typescript-eslint": "^8.6.0"
+  },
+  "resolutions": {
+    "eslint": "8.57.1"
   },
   "prettier": {
     "singleQuote": true,

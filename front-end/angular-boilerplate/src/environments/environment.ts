@@ -5,4 +5,5 @@ export const environment = {
   version: env['npm_package_version'] + '-dev',
   defaultLanguage: 'de-DE',
   supportedLanguages: ['de-DE', 'en-US', 'es-ES', 'fr-FR', 'it-IT'],
+  disabledLogChannels: [], // ['ProductListComponent', 'SomeOtherChannel']
 };

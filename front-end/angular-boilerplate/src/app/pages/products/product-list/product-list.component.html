@@ -1,0 +1,30 @@
+<section class="main-container">
+  <h2>Product List</h2>
+  <div class="product-table-container">
+    <table class="product-table">
+      <thead>
+        <tr>
+          <th>Product ID</th>
+          <th>Product Name</th>
+          <th>Price</th>
+          <th>Quantity</th>
+        </tr>
+      </thead>
+      <tbody *ngIf="!isLoading; else loading">
+        <ng-container *ngFor="let product of products; trackBy: trackById">
+          <tr (click)="productClicked(product)">
+            <td>{{ product.id }}</td>
+            <td>{{ product.name }}</td>
+            <td>{{ product.price }}</td>
+            <td>{{ product.quantity }}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+    <ng-template #loading>
+      <tr>
+        <td colspan="5" style="text-align: center">Loading...</td>
+      </tr>
+    </ng-template>
+  </div>
+</section>

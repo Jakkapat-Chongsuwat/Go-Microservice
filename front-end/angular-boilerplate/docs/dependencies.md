@@ -4,7 +4,7 @@ This app has third-party dependencies (both production and development). These d
 
 ## Highlighted dependencies
 
-- [@ngneat/hot-toast](https://github.com/ngneat/hot-toast): Toast notifications for Angular.
+- [@ngxpert/hot-toast](https://github.com/ngneat/hot-toast): Toast notifications for Angular.
 - [@ngneat/overview](https://github.com/ngneat/overview): A powerful solution for Angular app walkthroughs.
 - [@ngneat/until-destroy](https://github.com/ngneat/until-destroy): Automatic cleanup of Angular subscriptions.
 - [@ngx-translate/core](https://www.npmjs.com/package/@ngx-translate/core): Internationalization (i18n) library for Angular applications.

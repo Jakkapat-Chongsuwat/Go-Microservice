@@ -34,17 +34,17 @@ export const webSidebarMenuItems: NavMenuItem[] = [
     icon: 'fa-box',
     subItems: [
       {
-        href: '/product-categories',
-        title: 'Product Categories',
+        href: '/products/list',
+        title: 'Product List',
         active: false,
       },
       {
-        href: '/product-types',
+        href: '/product/types',
         title: 'Product Types',
         active: false,
       },
       {
-        href: '/product-attributes',
+        href: '/product/attributes',
         title: 'Product Attributes',
         active: false,
       },

@@ -1,0 +1,24 @@
+<form [formGroup]="orderForm" (ngSubmit)="submitOrder()">
+  <div class="form-group">
+    <label for="userId">User ID</label>
+    <input id="userId" formControlName="userId" placeholder="Enter your User ID" />
+    <div class="error" *ngIf="orderForm.get('userId')?.invalid && orderForm.get('userId')?.touched">User ID is required.</div>
+  </div>
+
+  <div formArrayName="items">
+    <div *ngFor="let item of items.controls; let i = index" [formGroupName]="i" class="item-group">
+      <label for="productId-{{ i }}">Product ID</label>
+      <input id="productId-{{ i }}" formControlName="productId" placeholder="Enter Product ID" />
+      <div class="error" *ngIf="item.get('productId')?.invalid && item.get('productId')?.touched">Product ID is required.</div>
+
+      <label for="quantity-{{ i }}">Quantity</label>
+      <input id="quantity-{{ i }}" type="number" formControlName="quantity" min="1" />
+      <div class="error" *ngIf="item.get('quantity')?.invalid && item.get('quantity')?.touched">Quantity must be at least 1.</div>
+    </div>
+  </div>
+
+  <div class="button-group">
+    <button type="button" (click)="addItem()">Add Another Item</button>
+    <button type="submit" [disabled]="orderForm.invalid">Place Order</button>
+  </div>
+</form>

@@ -1,39 +1,5 @@
-/**
- * Simple logger system with the possibility of registering custom outputs.
- *
- * 4 different log levels are provided, with corresponding methods:
- * - debug   : for debug information
- * - info    : for informative status of the application (success, ...)
- * - warning : for non-critical errors that do not prevent normal application behavior
- * - error   : for critical errors that prevent normal application behavior
- *
- * Example usage:
- * ```
- * import { Logger } from 'app/core/logger.service';
- *
- * const log = new Logger('myFile');
- * ...
- * log.debug('something happened');
- * ```
- *
- * To disable debug and info logs in production, add this snippet to your root component:
- * ```
- * export class AppComponent implements OnInit {
- *   ngOnInit() {
- *     if (environment.production) {
- *       Logger.enableProductionMode();
- *     }
- *     ...
- *   }
- * }
- *
- * If you want to process logs through other outputs than console, you can add LogOutput functions to Logger.outputs.
- */
+import { NGXLogger, NgxLoggerLevel } from 'ngx-logger';
 
-/**
- * The possible log levels.
- * LogLevel.Off is never emitted and only used with Logger.level property to disable logs.
- */
 export enum LogLevel {
   Off = 0,
   Error,
@@ -43,69 +9,119 @@ export enum LogLevel {
 }
 
 /**
- * Log output handler function.
+ * A Logger class that wraps NGXLogger to provide structured logging with contextual metadata.
+ *
+ * Usage:
+ *   1. In your AppComponent (or initializer), set the NGXLogger instance:
+ *        Logger.setNGXLogger(injectedNgxLogger);
+ *
+ *   2. Create loggers with an optional source and log:
+ *        const log = new Logger('MyComponent');
+ *        log.debug('Something happened');
+ *
+ *   3. You can disable logging for a specific channel by using:
+ *        Logger.disableChannel('MyComponent');
  */
-export type LogOutput = (source: string | undefined, level: LogLevel, ...objects: any[]) => void;
-
 export class Logger {
-  /**
-   * Current logging level.
-   * Set it to LogLevel.Off to disable logs completely.
-   */
-  static level = LogLevel.Debug;
+  private static ngxLogger: NGXLogger;
 
-  /**
-   * Additional log outputs.
-   */
-  static outputs: LogOutput[] = [];
+  // A list of logger channels that are disabled.
+  private static disabledChannels: Set<string> = new Set();
 
-  /**
-   * Enables production mode.
-   * Sets logging level to LogLevel.Warning.
-   */
-  static enableProductionMode() {
-    Logger.level = LogLevel.Warning;
+  static setNGXLogger(logger: NGXLogger): void {
+    Logger.ngxLogger = logger;
   }
 
-  constructor(private readonly _source?: string) {}
-
-  /**
-   * Logs messages or objects  with the debug level.
-   * Works the same as console.log().
-   */
-  debug(...objects: any[]) {
-    this._log(console.log, LogLevel.Debug, objects);
+  static enableProductionMode(): void {
+    if (Logger.ngxLogger) {
+      Logger.ngxLogger.updateConfig({
+        level: NgxLoggerLevel.WARN,
+        serverLogLevel: NgxLoggerLevel.ERROR,
+      });
+    }
   }
 
   /**
-   * Logs messages or objects  with the info level.
-   * Works the same as console.log().
+   * Disable logging for a specific source/channel.
    */
-  info(...objects: any[]) {
-    this._log(console.info, LogLevel.Info, objects);
+  static disableChannel(channel: string): void {
+    Logger.disabledChannels.add(channel);
   }
 
   /**
-   * Logs messages or objects  with the warning level.
-   * Works the same as console.log().
+   * Enable logging for a specific source/channel.
    */
-  warn(...objects: any[]) {
-    this._log(console.warn, LogLevel.Warning, objects);
+  static enableChannel(channel: string): void {
+    Logger.disabledChannels.delete(channel);
   }
 
   /**
-   * Logs messages or objects  with the error level.
-   * Works the same as console.log().
+   * Check if logging is disabled for the given channel.
    */
-  error(...objects: any[]) {
-    this._log(console.error, LogLevel.Error, objects);
+  private static isChannelDisabled(channel?: string): boolean {
+    return channel ? Logger.disabledChannels.has(channel) : false;
   }
 
-  private _log(func: (...args: any[]) => void, level: LogLevel, objects: any[]) {
-    if (level <= Logger.level) {
-      const log = this._source ? ['[' + this._source + ']'].concat(objects) : objects;
-      func.apply(console, log);
-      Logger.outputs.forEach((output) => output.apply(output, [this._source, level, ...objects]));
+  constructor(
+    private readonly _source?: string,
+    private _context?: any,
+  ) {}
+
+  setContext(context: any): void {
+    this._context = context;
+  }
+
+  debug(...objects: any[]): void {
+    this.log('DEBUG', objects);
+  }
+
+  info(...objects: any[]): void {
+    this.log('INFO', objects);
+  }
+
+  warn(...objects: any[]): void {
+    this.log('WARN', objects);
+  }
+
+  error(...objects: any[]): void {
+    this.log('ERROR', objects);
+  }
+
+  private log(level: string, objects: any[]): void {
+    // If this channel is disabled, don't log anything.
+    if (Logger.isChannelDisabled(this._source)) {
+      return;
+    }
+
+    const structuredLog = {
+      timestamp: new Date().toISOString(),
+      level: level,
+      source: this._source,
+      message: objects,
+      context: this._context,
+    };
+
+    const logMessage = JSON.stringify(structuredLog);
+
+    if (Logger.ngxLogger) {
+      switch (level) {
+        case 'DEBUG':
+          Logger.ngxLogger.debug(logMessage);
+          break;
+        case 'INFO':
+          Logger.ngxLogger.info(logMessage);
+          break;
+        case 'WARN':
+          Logger.ngxLogger.warn(logMessage);
+          break;
+        case 'ERROR':
+          Logger.ngxLogger.error(logMessage);
+          break;
+        default:
+          Logger.ngxLogger.debug(logMessage);
+      }
+    } else {
+      console.log(logMessage);
     }
   }
 }
