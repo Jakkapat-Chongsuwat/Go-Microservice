@@ -56,6 +56,7 @@ func (p *OrderEventProducer) SendOrderEvent(event domain.OrderEvent) error {
 	native := map[string]interface{}{
 		"order_id":   event.OrderID,
 		"event_type": event.EventType,
+		"message":    event.Message,
 		"timestamp":  event.Timestamp.UnixMilli(),
 	}
 

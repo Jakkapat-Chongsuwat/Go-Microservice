@@ -31,7 +31,7 @@ func main() {
 	logger := initLogger()
 	defer logger.Sync()
 
-	hub := ws.NewHub()
+	hub := ws.NewHub(logger)
 	startWebSocketServer(logger, hub)
 
 	kafkaCfg := getKafkaConfig()
@@ -124,14 +124,24 @@ func wsHandler(hub *ws.Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			log.Println("failed to upgrade connection:", err)
+			log.Println("Failed to upgrade connection:", err)
 			return
 		}
+		log.Println("Client connected.")
 		hub.Add(conn)
 		defer hub.Remove(conn)
 
 		for {
-			if _, _, err := conn.ReadMessage(); err != nil {
+			messageType, p, err := conn.ReadMessage()
+			if err != nil {
+				log.Println("Error reading message:", err)
+				break
+			}
+
+			log.Println("Received message:", string(p))
+
+			if err := conn.WriteMessage(messageType, p); err != nil {
+				log.Println("Error writing message:", err)
 				break
 			}
 		}

@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"order-service/internal/adapters/models"
@@ -108,14 +109,35 @@ func (o *OrderUseCaseImpl) persistOrder(ctx context.Context, order *domain.Order
 }
 
 func (o *OrderUseCaseImpl) publishOrderEvent(order *domain.Order) {
+	var itemSummaries []string
+	for _, item := range order.Items {
+		itemSummaries = append(itemSummaries, item.ProductID)
+	}
+	summary := ""
+	if len(itemSummaries) > 0 {
+		summary = fmt.Sprintf(" for items: %s", joinStrings(itemSummaries, ", "))
+	}
+
 	event := domain.OrderEvent{
 		OrderID:   order.ID,
 		EventType: "CREATED",
+		Message:   fmt.Sprintf("Order created%s", summary),
 		Timestamp: domain.Clock.Now(),
 	}
 	if err := o.orderEventProducer.SendOrderEvent(event); err != nil {
 		o.logger.Error("failed to send order event", zap.Error(err))
 	}
+}
+
+func joinStrings(strs []string, sep string) string {
+	var buf bytes.Buffer
+	for i, s := range strs {
+		if i > 0 {
+			buf.WriteString(sep)
+		}
+		buf.WriteString(s)
+	}
+	return buf.String()
 }
 
 func (o *OrderUseCaseImpl) GetOrder(ctx context.Context, orderID string) (*domain.Order, error) {

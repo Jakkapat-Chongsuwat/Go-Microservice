@@ -3,23 +3,23 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { Logger } from '@app/@core/services/misc/logger.service';
-import { OrderService } from '@app/@core/services/order.service';
-import { OrderRequestDto } from '@app/@core/dtos/order-request.dto';
+import { OrderRequestDto } from '@core/dtos/order-request.dto';
 import { HotToastService } from '@ngxpert/hot-toast';
+import { UseOrder } from '@app/@core/usecases/useOrder';
 
 @Component({
   selector: 'app-order-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './order-form.component.html',
   styleUrls: ['./order-form.component.scss'],
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule],
 })
 export class OrderFormComponent implements OnInit {
   orderForm!: FormGroup;
   private readonly logger = new Logger('OrderFormComponent');
 
   private readonly fb = inject(FormBuilder);
-  private readonly orderService = inject(OrderService);
+  private readonly useOrder = inject(UseOrder);
   private readonly route = inject(ActivatedRoute);
   private readonly _toast = inject(HotToastService);
 
@@ -63,10 +63,9 @@ export class OrderFormComponent implements OnInit {
   submitOrder(): void {
     if (this.orderForm.valid) {
       const order: OrderRequestDto = this.orderForm.value;
-      this.orderService.createOrder(order).subscribe({
+      this.useOrder.createOrder(order).subscribe({
         next: (response) => {
           this.logger.info('Order created successfully', response);
-          this._toast.show('Order created successfully');
         },
         error: (err) => {
           this.logger.error('Error creating order', err);

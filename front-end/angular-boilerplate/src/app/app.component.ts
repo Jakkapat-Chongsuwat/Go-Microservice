@@ -10,12 +10,13 @@ import { AppUpdateService, Logger } from '@core/services';
 import { SocketIoService } from '@core/socket-io';
 import { NGXLogger } from 'ngx-logger';
 import { CoreModule } from './@core/modules/core.module';
+import { NotificationListenerComponent } from './shared/components/notification-listener/notification-listener.component';
 
 @UntilDestroy()
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, TranslateModule, CoreModule],
-  template: '<router-outlet></router-outlet>',
+  imports: [RouterOutlet, TranslateModule, CoreModule, NotificationListenerComponent],
+  templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
 export class AppComponent implements OnInit, OnDestroy {

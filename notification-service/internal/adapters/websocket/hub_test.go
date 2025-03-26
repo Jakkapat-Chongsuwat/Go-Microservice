@@ -11,10 +11,11 @@ import (
 
 	gws "github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestWebSocketServerIntegration(t *testing.T) {
-	hub := ws.NewHub()
+	hub := ws.NewHub(zap.NewNop())
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		upgrader := gws.Upgrader{

@@ -132,6 +132,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "20051:20051"
+      - "20052:20052"
     environment:
       - KAFKA_PORT=9092
       - KAFKA_BROKERS=kafka:9092
@@ -139,6 +140,7 @@ services:
       - KAFKA_TOPIC=order-events
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
       - GRPC_PORT=20051
+      - WS_PORT=20052
     depends_on:
       - kafka
       - schema-registry
