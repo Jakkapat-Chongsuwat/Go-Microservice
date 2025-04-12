@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service-db
+  template:
+    metadata:
+      labels:
+        app: user-service-db
+    spec:
+      # Pod-level securityContext only sets fsGroup if you want group-ownership
+      # but do NOT set runAsNonRoot here, because that applies to *all* containers.
+      securityContext:
+        fsGroup: 999
+      initContainers:
+        - name: fix-permissions
+          image: alpine:3.17
+          # Let this container run as root
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            # Typically needed if runAsNonRoot was forced at a higher level
+            # runAsNonRoot: false
+            allowPrivilegeEscalation: true
+          command: ["sh", "-c"]
+          args:
+            - >
+              echo "Fixing permissions in /var/lib/postgresql/data...";
+              chown -R 999:999 /var/lib/postgresql/data &&
+              chmod -R 700 /var/lib/postgresql/data;
+          volumeMounts:
+            - name: user-service-data
+              mountPath: /var/lib/postgresql/data
+
+      containers:
+        - name: user-service-db
+          image: postgres:15-alpine
+          # The main container runs as non-root
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+          args: ["-p", "5555"]
+          ports:
+            - containerPort: 5555
+          env:
+            - name: POSTGRES_USER
+              value: "devuser"
+            - name: POSTGRES_PASSWORD
+              value: "devpass"
+            - name: POSTGRES_DB
+              value: "user_service"
+          volumeMounts:
+            - name: user-service-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - devuser
+                - -d
+                - user_service
+                - -p
+                - "5555"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - devuser
+                - -d
+                - user_service
+                - -p
+                - "5555"
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "512Mi"
+      volumes:
+        - name: user-service-data
+          persistentVolumeClaim:
+            claimName: user-service-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service-db
+spec:
+  selector:
+    app: user-service-db
+  ports:
+    - port: 5555
+      targetPort: 5555
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: user-service-data-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

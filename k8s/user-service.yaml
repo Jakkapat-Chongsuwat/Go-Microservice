@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      initContainers:
+        - name: wait-for-user-service-db
+          image: busybox
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              echo "Waiting for user-service-db (port 5555)...";
+              until nc -z user-service-db 5555; do
+                echo "DB not ready; retrying in 5s...";
+                sleep 5;
+              done;
+              echo "DB is up! Proceeding...";
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+      containers:
+        - name: user-service
+          image: docker.io/library/go-microservice-user-service:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 50051
+            - containerPort: 50052
+          env:
+            - name: DB_HOST
+              value: "user-service-db"
+            - name: DB_USER
+              value: "devuser"
+            - name: DB_PASS
+              value: "devpass"
+            - name: DB_NAME
+              value: "user_service"
+            - name: DB_SCHEMA
+              value: "user_service"
+            - name: REPO_TYPE
+              value: "gorm"
+            - name: DB_DRIVER
+              value: "postgres"
+            - name: DB_SSLMODE
+              value: "disable"
+            - name: DB_PORT
+              value: "5555"
+            - name: GRPC_PORT
+              value: "50051"
+            - name: HTTP_PORT
+              value: "50052"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+spec:
+  selector:
+    app: user-service
+  ports:
+    - name: grpc
+      port: 50051
+      targetPort: 50051
+    - name: http
+      port: 50052
+      targetPort: 50052
+  type: ClusterIP

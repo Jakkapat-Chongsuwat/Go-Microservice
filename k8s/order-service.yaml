@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      initContainers:
+        - name: wait-for-dependencies
+          image: busybox
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              echo "Waiting for order-service-db...";
+              until nc -z order-service-db 5556; do
+                echo "DB not ready; retry in 5s...";
+                sleep 5;
+              done;
+              echo "order-service-db is up.";
+
+              echo "Waiting for user-service...";
+              until nc -z user-service 50051; do
+                echo "user-service not ready; retry in 5s...";
+                sleep 5;
+              done;
+              echo "user-service is up.";
+
+              echo "Waiting for kafka...";
+              until nc -z kafka 9092; do
+                echo "kafka not ready; retry in 5s...";
+                sleep 5;
+              done;
+              echo "kafka is up! Proceeding...";
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+      containers:
+        - name: order-service
+          image: docker.io/library/go-microservice-order-service:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 60051
+            - containerPort: 60052
+          env:
+            - name: DB_HOST
+              value: "order-service-db"
+            - name: DB_USER
+              value: "devuser"
+            - name: DB_PASS
+              value: "devpass"
+            - name: DB_PORT
+              value: "5556"
+            - name: DB_NAME
+              value: "order_service"
+            - name: DB_SCHEMA
+              value: "order_service"
+            - name: DB_SSLMODE
+              value: "disable"
+            - name: DB_DRIVER
+              value: "postgres"
+            - name: REPO_TYPE
+              value: "gorm"
+            - name: USER_SERVICE_ADDRESS
+              value: "user-service:50051"
+            - name: INVENTORY_SERVICE_ADDRESS
+              value: "inventory-service:30051"
+            - name: GRPC_PORT
+              value: "60051"
+            - name: KAFKA_PORT
+              value: "9092"
+            - name: KAFKA_BROKERS
+              value: "kafka:9092"
+            - name: KAFKA_ORDER_TOPIC
+              value: "order-events"
+            - name: SCHEMA_REGISTRY_URL
+              value: "http://schema-registry:8081"
+            - name: HTTP_PORT
+              value: "60052"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+spec:
+  selector:
+    app: order-service
+  ports:
+    - name: grpc
+      port: 60051
+      targetPort: 60051
+    - name: http
+      port: 60052
+      targetPort: 60052
+  type: ClusterIP

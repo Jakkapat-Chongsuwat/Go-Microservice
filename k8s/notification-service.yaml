@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      initContainers:
+        - name: wait-for-kafka-and-registry
+          image: busybox
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              echo "Waiting for kafka:9092...";
+              until nc -z kafka 9092; do
+                echo "Kafka not ready; retry in 5s...";
+                sleep 5;
+              done;
+
+              echo "Waiting for schema-registry:8081...";
+              until nc -z schema-registry 8081; do
+                echo "Schema Registry not ready; retry in 5s...";
+                sleep 5;
+              done;
+              echo "All dependencies ready! Starting notification-service...";
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+      containers:
+        - name: notification-service
+          image: docker.io/library/go-microservice-notification-service:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 20051
+            - containerPort: 20052
+          env:
+            - name: KAFKA_PORT
+              value: "9092"
+            - name: KAFKA_BROKERS
+              value: "kafka:9092"
+            - name: KAFKA_GROUP_ID
+              value: "notification-service-group"
+            - name: KAFKA_TOPIC
+              value: "order-events"
+            - name: SCHEMA_REGISTRY_URL
+              value: "http://schema-registry:8081"
+            - name: GRPC_PORT
+              value: "20051"
+            - name: WS_PORT
+              value: "20052"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - name: grpc
+      port: 20051
+      targetPort: 20051
+    - name: ws
+      port: 20052
+      targetPort: 20052
+  type: ClusterIP

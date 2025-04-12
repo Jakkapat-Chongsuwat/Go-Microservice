@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory-service-db
+  template:
+    metadata:
+      labels:
+        app: inventory-service-db
+    spec:
+      securityContext:
+        fsGroup: 999
+      initContainers:
+        - name: fix-permissions
+          image: alpine:3.17
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: true
+          command: ["sh", "-c"]
+          args:
+            - >
+              echo "Fixing permissions in /var/lib/postgresql/data...";
+              chown -R 999:999 /var/lib/postgresql/data &&
+              chmod -R 700 /var/lib/postgresql/data;
+          volumeMounts:
+            - name: inventory-service-data
+              mountPath: /var/lib/postgresql/data
+
+      containers:
+        - name: inventory-service-db
+          image: postgres:15-alpine
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+          args: ["-p", "5557", "-c", "shared_preload_libraries=pgcrypto"]
+          env:
+            - name: POSTGRES_USER
+              value: "devuser"
+            - name: POSTGRES_PASSWORD
+              value: "devpass"
+            - name: POSTGRES_DB
+              value: "inventory_service"
+          ports:
+            - containerPort: 5557
+          volumeMounts:
+            - name: inventory-service-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - devuser
+                - -d
+                - inventory_service
+                - -p
+                - "5557"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - devuser
+                - -d
+                - inventory_service
+                - -p
+                - "5557"
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "512Mi"
+      volumes:
+        - name: inventory-service-data
+          persistentVolumeClaim:
+            claimName: inventory-service-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service-db
+spec:
+  selector:
+    app: inventory-service-db
+  ports:
+    - port: 5557
+      targetPort: 5557
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: inventory-service-data-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
