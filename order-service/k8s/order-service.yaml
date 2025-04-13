@@ -33,11 +33,18 @@ spec:
               echo "user-service is up.";
 
               echo "Waiting for kafka...";
-              until nc -z kafka 9092; do
+              until nc -z kafka.kafka.svc.cluster.local 9092; do
                 echo "kafka not ready; retry in 5s...";
                 sleep 5;
               done;
-              echo "kafka is up! Proceeding...";
+              echo "kafka is up!";
+
+              echo "Waiting for Schema Registry...";
+              until nc -z schema-registry.schema-registry.svc.cluster.local 8081; do
+                echo "Schema Registry not ready; retry in 5s...";
+                sleep 5;
+              done;
+              echo "All dependencies are up! Proceeding...";
           resources:
             requests:
               cpu: "50m"
@@ -80,11 +87,11 @@ spec:
             - name: KAFKA_PORT
               value: "9092"
             - name: KAFKA_BROKERS
-              value: "kafka:9092"
+              value: "kafka.kafka.svc.cluster.local:9092"
             - name: KAFKA_ORDER_TOPIC
               value: "order-events"
             - name: SCHEMA_REGISTRY_URL
-              value: "http://schema-registry:8081"
+              value: "http://schema-registry.schema-registry.svc.cluster.local:8081"
             - name: HTTP_PORT
               value: "60052"
           resources:

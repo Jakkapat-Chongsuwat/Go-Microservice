@@ -1,9 +1,9 @@
 #!/bin/sh
 set -e
 
-# Check if we're using environment variables or direct config
-if [ -f "/etc/krakend/krakend.json.tpl" ] && [ ! -f "/etc/krakend/krakend.json" ]; then
-    echo "Processing template configuration..."
+# If template exists, process it
+if [ -f "/etc/krakend/krakend.json.tpl" ]; then
+    echo "Processing krakend.json.tpl..."
     envsubst < /etc/krakend/krakend.json.tpl > /etc/krakend/krakend.json
     echo "Template processed successfully."
 elif [ ! -f "/etc/krakend/krakend.json" ]; then

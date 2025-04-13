@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: user-db-migration
+spec:
+  template:
+    spec:
+      containers:
+        - name: migrate
+          image: migrate/migrate
+          command: ["migrate"]
+          args:
+            [
+              "-path=/migrations",
+              "-database",
+              "postgres://devuser:devpass@user-service-db:5555/user_service?sslmode=disable",
+              "up",
+            ]
+          volumeMounts:
+            - name: migrations
+              mountPath: /migrations
+      volumes:
+        - name: migrations
+          configMap:
+            name: user-migrations
+      restartPolicy: Never
+  backoffLimit: 4

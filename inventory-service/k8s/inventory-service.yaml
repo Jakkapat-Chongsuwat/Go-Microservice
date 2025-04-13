@@ -79,4 +79,7 @@ spec:
     - name: grpc
       port: 30051
       targetPort: 30051
+    - name: http
+      port: 30052
+      targetPort: 30052
   type: ClusterIP

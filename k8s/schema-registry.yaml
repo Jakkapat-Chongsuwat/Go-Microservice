@@ -1,64 +1,46 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: schema-registry
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: schema-registry
-  template:
-    metadata:
-      labels:
-        app: schema-registry
-    spec:
-      initContainers:
-        - name: wait-for-kafka
-          image: busybox
-          command: ["/bin/sh", "-c"]
-          args:
-            - >
-              echo "Waiting for kafka:9092...";
-              until nc -z kafka 9092; do
-                echo "Kafka not ready; retry in 5s...";
-                sleep 5;
-              done;
-              echo "Kafka is up! Starting schema-registry...";
-          resources:
-            requests:
-              cpu: "50m"
-              memory: "64Mi"
-            limits:
-              cpu: "100m"
-              memory: "128Mi"
-      containers:
-        - name: schema-registry
-          image: confluentinc/cp-schema-registry:latest
-          ports:
-            - containerPort: 8081
-          env:
-            - name: SCHEMA_REGISTRY_HOST_NAME
-              value: "schema-registry"
-            - name: SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS
-              value: "PLAINTEXT://kafka:9092"
-            - name: SCHEMA_REGISTRY_LISTENERS
-              value: "http://0.0.0.0:8081"
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "300m"
-              memory: "512Mi"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: schema-registry
-spec:
-  selector:
-    app: schema-registry
-  ports:
-    - port: 8081
-      targetPort: 8081
-  type: ClusterIP
+## Schema Registry Configuration
+## Disable the built-in Kafka
+kafka:
+  enabled: false
+
+## External Kafka Configuration
+externalKafka:
+  # Explicitly include the protocol in the broker address
+  brokers:
+    - "PLAINTEXT://kafka.kafka.svc.cluster.local:9092"
+  listener:
+    protocol: PLAINTEXT
+
+## Direct Schema Registry Configuration
+## Double-check these settings are properly being applied
+schemaRegistryHeapOpts: "-Xmx512M -Xms512M"
+
+## Custom configuration overrides
+## These are crucial for fixing the connection issues
+customConfiguration: |-
+  kafkastore.bootstrap.servers=PLAINTEXT://kafka.kafka.svc.cluster.local:9092
+  kafkastore.security.protocol=PLAINTEXT
+  debug=true
+
+## Increase health check timeouts
+livenessProbe:
+  initialDelaySeconds: 120
+  periodSeconds: 30
+  failureThreshold: 6
+
+readinessProbe:
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  failureThreshold: 6
+
+## Resource settings
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+## Debugging settings
+debug: true

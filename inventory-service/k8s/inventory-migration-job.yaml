@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: inventory-db-migration
+spec:
+  template:
+    spec:
+      containers:
+        - name: migrate
+          image: migrate/migrate
+          command: ["migrate"]
+          args:
+            [
+              "-path=/migrations",
+              "-database",
+              "postgres://devuser:devpass@inventory-service-db:5557/inventory_service?sslmode=disable",
+              "up",
+            ]
+          volumeMounts:
+            - name: migrations
+              mountPath: /migrations
+      volumes:
+        - name: migrations
+          configMap:
+            name: inventory-migrations
+      restartPolicy: Never
+  backoffLimit: 4
