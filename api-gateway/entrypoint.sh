@@ -4,7 +4,7 @@ set -e
 # If template exists, process it
 if [ -f "/etc/krakend/krakend.json.tpl" ]; then
     echo "Processing krakend.json.tpl..."
-    envsubst < /etc/krakend/krakend.json.tpl > /etc/krakend/krakend.json
+    envsubst < /etc/krakend/krakend.json.tpl > /tmp/krakend.json
     echo "Template processed successfully."
 elif [ ! -f "/etc/krakend/krakend.json" ]; then
     echo "ERROR: No configuration file found at /etc/krakend/krakend.json"
@@ -14,4 +14,4 @@ else
 fi
 
 # Start KrakenD with the configuration
-exec krakend run -c /etc/krakend/krakend.json "$@"
+exec krakend run -c /tmp/krakend.json "$@"

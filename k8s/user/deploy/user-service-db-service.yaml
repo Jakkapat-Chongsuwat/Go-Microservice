@@ -12,19 +12,14 @@ spec:
       labels:
         app: user-service-db
     spec:
-      # Pod-level securityContext only sets fsGroup if you want group-ownership
-      # but do NOT set runAsNonRoot here, because that applies to *all* containers.
       securityContext:
         fsGroup: 999
       initContainers:
         - name: fix-permissions
           image: alpine:3.17
-          # Let this container run as root
           securityContext:
             runAsUser: 0
             runAsGroup: 0
-            # Typically needed if runAsNonRoot was forced at a higher level
-            # runAsNonRoot: false
             allowPrivilegeEscalation: true
           command: ["sh", "-c"]
           args:
@@ -39,7 +34,6 @@ spec:
       containers:
         - name: user-service-db
           image: postgres:15-alpine
-          # The main container runs as non-root
           securityContext:
             runAsUser: 999
             runAsGroup: 999

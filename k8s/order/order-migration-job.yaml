@@ -2,6 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: order-db-migration
+  namespace: order-service
 spec:
   template:
     spec:

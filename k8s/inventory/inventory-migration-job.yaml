@@ -1,7 +1,9 @@
+# Database migration job
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: inventory-db-migration
+  namespace: inventory-service
 spec:
   template:
     spec:

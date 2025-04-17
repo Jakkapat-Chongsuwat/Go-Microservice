@@ -1,11 +1,15 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: krakend-config
+  namespace: api-gateway
 data:
   krakend.json: |
     {
       "version": 3,
       "name": "API Gateway",
       "port": 8080,
-      "timeout": "10s",
+      "timeout": "3s",
       "cache_ttl": "300s",
       "output_encoding": "json",
       "extra_config": {
@@ -149,13 +153,3 @@ data:
         }
       ]
     }
-kind: ConfigMap
-metadata:
-  annotations:
-    kubectl.kubernetes.io/last-applied-configuration: |
-      {"apiVersion":"v1","data":{"krakend.json":"{\n  \"version\": 3,\n  \"name\": \"API Gateway\",\n  \"port\": 8080,\n  \"timeout\": \"10s\",\n  \"cache_ttl\": \"300s\",\n  \"output_encoding\": \"json\",\n  \"extra_config\": {\n    \"router\": {\n      \"auto_options\": true\n    },\n    \"security/cors\": {\n      \"allow_origins\": [\"*\"],\n      \"allow_methods\": [\"GET\", \"HEAD\", \"POST\", \"OPTIONS\"],\n      \"expose_headers\": [\"Content-Length\", \"Content-Type\"],\n      \"allow_headers\": [\n          \"Accept-Language\",\n          \"Authorization\",\n          \"Content-Type\",\n          \"lang\"\n      ],\n      \"max_age\": \"12h\",\n      \"allow_credentials\": false,\n      \"debug\": true\n    }\n  },\n  \"endpoints\": [\n    {\n      \"endpoint\": \"/orders\",\n      \"method\": \"POST\",\n      \"backend\": [\n        {\n          \"host\": [\n            \"http://order-service:60052\"\n          ],\n          \"url_pattern\": \"/api/orders\",\n          \"extra_config\": {\n            \"backend/http\": {\n              \"return_error_code\": true\n            }\n          }\n        }\n      ]\n    },\n    {\n      \"endpoint\": \"/orders/{orderID}\",\n      \"method\": \"GET\",\n      \"backend\": [\n        {\n          \"host\": [\n            \"http://order-service:60052\"\n          ],\n          \"url_pattern\": \"/api/orders/{orderID}\",\n          \"extra_config\": {\n            \"backend/http\": {\n              \"return_error_code\": true\n            }\n          }\n        }\n      ]\n    },\n    {\n      \"endpoint\": \"/users\",\n      \"method\": \"POST\",\n      \"backend\": [\n        {\n          \"host\": [\n            \"http://user-service:50052\"\n          ],\n          \"url_pattern\": \"/api/users\",\n          \"extra_config\": {\n            \"backend/http\": {\n              \"return_error_code\": true\n            }\n          }\n        }\n      ]\n    },\n    {\n      \"endpoint\": \"/users\",\n      \"method\": \"GET\",\n      \"backend\": [\n        {\n          \"host\": [\n            \"http://user-service:50052\"\n          ],\n          \"url_pattern\": \"/api/users\",\n          \"extra_config\": {\n            \"backend/http\": {\n              \"return_error_code\": true\n            }\n          }\n        }\n      ]\n    },\n    {\n      \"endpoint\": \"/products\",\n      \"method\": \"POST\",\n      \"backend\": [\n        {\n          \"host\": [\n            \"http://inventory-service:30052\"\n          ],\n          \"url_pattern\": \"/api/products\",\n          \"extra_config\": {\n            \"backend/http\": {\n              \"return_error_code\": true\n            }\n          }\n        }\n      ]\n    },\n    {\n      \"endpoint\": \"/products/{id}\",\n      \"method\": \"GET\",\n      \"backend\": [\n        {\n          \"host\": [\n            \"http://inventory-service:30052\"\n          ],\n          \"url_pattern\": \"/api/products/{id}\",\n          \"extra_config\": {\n            \"backend/http\": {\n              \"return_error_code\": true\n            }\n          }\n        }\n      ]\n    },\n    {\n      \"endpoint\": \"/products\",\n      \"method\": \"GET\",\n      \"backend\": [\n        {\n          \"host\": [\n            \"http://inventory-service:30052\"\n          ],\n          \"url_pattern\": \"/api/products\",\n          \"extra_config\": {\n            \"backend/http\": {\n              \"return_error_code\": true\n            }\n          }\n        }\n      ]\n    }\n  ]\n}\n"},"kind":"ConfigMap","metadata":{"annotations":{},"creationTimestamp":"2025-04-09T17:34:10Z","name":"krakend-config","namespace":"default","resourceVersion":"173690","uid":"7977dc70-77bf-414a-a06f-34fdd774e913"}}
-  creationTimestamp: "2025-04-09T17:34:10Z"
-  name: krakend-config
-  namespace: default
-  resourceVersion: "173697"
-  uid: 7977dc70-77bf-414a-a06f-34fdd774e913

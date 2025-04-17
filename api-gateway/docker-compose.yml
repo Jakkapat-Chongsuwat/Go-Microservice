@@ -2,7 +2,7 @@ services:
   api-gateway:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.compose
     container_name: krakend
     ports:
       - "9001:8080"

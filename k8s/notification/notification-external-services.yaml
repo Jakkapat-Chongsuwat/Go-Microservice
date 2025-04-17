@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: notification-service
+spec:
+  type: ExternalName
+  externalName: kafka-controller-headless.kafka.svc.cluster.local
+  ports:
+    - name: kafka-port
+      port: 9092
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: schema-registry
+  namespace: notification-service
+spec:
+  type: ExternalName
+  externalName: schema-registry-headless.schema-registry.svc.cluster.local
+  ports:
+    - name: schema-registry-port
+      port: 8081
