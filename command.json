@@ -1,0 +1,391 @@
+{
+    "global": {
+      "commands": [],
+      "folders": []
+    },
+    "workspace": {
+      "commands": [
+        {
+          "id": "b1-inventory-build",
+          "name": "Build inventory service",
+          "command": "export DOCKER_BUILDKIT=1 && cd ~/projects/Go-Microservice/inventory-service && docker build -t go-microservice-inventory-service:latest .",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 1,
+          "parentFolderId": "docker-build"
+        },
+        {
+          "id": "b2-user-build",
+          "name": "Build user service",
+          "command": "export DOCKER_BUILDKIT=1 && cd ~/projects/Go-Microservice/user-service && docker build -t go-microservice-user-service:latest .",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 2,
+          "parentFolderId": "docker-build"
+        },
+        {
+          "id": "b3-order-build",
+          "name": "Build order service",
+          "command": "export DOCKER_BUILDKIT=1 && cd ~/projects/Go-Microservice/order-service && docker build -t go-microservice-order-service:latest .",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 3,
+          "parentFolderId": "docker-build"
+        },
+        {
+          "id": "b4-api-build",
+          "name": "Build API gateway",
+          "command": "export DOCKER_BUILDKIT=1 && cd ~/projects/Go-Microservice/api-gateway && docker build -t go-microservice-api-gateway:latest .",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 4,
+          "parentFolderId": "docker-build"
+        },
+        {
+          "id": "b5-notification-build",
+          "name": "Build notification service",
+          "command": "export DOCKER_BUILDKIT=1 && cd ~/projects/Go-Microservice/notification-service && docker build -t go-microservice-notification-service:latest .",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 5,
+          "parentFolderId": "docker-build"
+        },
+        {
+          "id": "b6-build-all",
+          "name": "Build all services",
+          "command": "cd ~/projects/Go-Microservice && ./build-all-services.sh",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 6,
+          "parentFolderId": "docker-build"
+        },
+        {
+          "id": "m1-start-full",
+          "name": "Start Minikube - full resources",
+          "command": "minikube start --cpus=4 --memory=6144 --disk-size=40g --driver=docker",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 1,
+          "parentFolderId": "minikube-management"
+        },
+        {
+          "id": "m2-start-minimal",
+          "name": "Start Minikube - minimal resources",
+          "command": "minikube start --cpus=2 --memory=4096 --disk-size=20g --driver=docker",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 2,
+          "parentFolderId": "minikube-management"
+        },
+        {
+          "id": "m3-delete",
+          "name": "Delete Minikube cluster",
+          "command": "minikube delete",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 3,
+          "parentFolderId": "minikube-management"
+        },
+        {
+          "id": "m4-status",
+          "name": "Check Minikube status",
+          "command": "minikube status",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 4,
+          "parentFolderId": "minikube-management"
+        },
+        {
+          "id": "m5-addons",
+          "name": "Enable Minikube addons",
+          "command": "minikube addons enable ingress dashboard metrics-server",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 5,
+          "parentFolderId": "minikube-management"
+        },
+        {
+          "id": "m6-dashboard",
+          "name": "Open Minikube dashboard",
+          "command": "minikube dashboard",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 6,
+          "parentFolderId": "minikube-management"
+        },
+        {
+          "id": "k1-helm-repo",
+          "name": "Add Bitnami Helm repo",
+          "command": "helm repo add bitnami https://charts.bitnami.com/bitnami && helm repo update",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 1,
+          "parentFolderId": "kubernetes-helm"
+        },
+        {
+          "id": "k2-kafka-ns",
+          "name": "Create Kafka namespace",
+          "command": "kubectl create namespace kafka",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 2,
+          "parentFolderId": "kubernetes-helm"
+        },
+        {
+          "id": "k3-kafka-install",
+          "name": "Install Kafka with Helm",
+          "command": "helm install kafka bitnami/kafka -n kafka --values ~/projects/Go-Microservice/k8s/kafka/kafka-values.yaml",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 3,
+          "parentFolderId": "kubernetes-helm"
+        },
+        {
+          "id": "k4-schema-registry",
+          "name": "Install Schema Registry with Helm",
+          "command": "helm install schema-registry bitnami/schema-registry -n kafka --values ~/projects/Go-Microservice/k8s/kafka/schema-registry-values.yaml",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 4,
+          "parentFolderId": "kubernetes-helm"
+        },
+        {
+          "id": "k5-kafka-resources",
+          "name": "Get Kafka resources",
+          "command": "kubectl get all -n kafka",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 5,
+          "parentFolderId": "kubernetes-helm"
+        },
+        {
+          "id": "k6-ms-namespace",
+          "name": "Create microservices namespace",
+          "command": "kubectl create namespace microservices",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 6,
+          "parentFolderId": "kubernetes-helm"
+        },
+        {
+          "id": "k7-deploy-ms",
+          "name": "Deploy microservices",
+          "command": "~/projects/Go-Microservice/deploy-microservices.sh",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 7,
+          "parentFolderId": "kubernetes-helm"
+        },
+        {
+          "id": "k8-ms-resources",
+          "name": "Get microservices resources",
+          "command": "kubectl get all -n microservices",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 8,
+          "parentFolderId": "kubernetes-helm"
+        },
+        {
+          "id": "k9-delete-ms",
+          "name": "Delete all microservices resources",
+          "command": "kubectl delete all --all -n microservices",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 9,
+          "parentFolderId": "kubernetes-helm"
+        },
+        {
+          "id": "k10-port-inventory",
+          "name": "Port forward to inventory service",
+          "command": "kubectl port-forward -n microservices svc/inventory-service 30052:30052",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 10,
+          "parentFolderId": "kubernetes-helm"
+        },
+        {
+          "id": "k11-port-api",
+          "name": "Port forward to API gateway",
+          "command": "kubectl port-forward -n microservices svc/api-gateway 8080:8080",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 11,
+          "parentFolderId": "kubernetes-helm"
+        },
+        {
+          "id": "i1-inventory-image",
+          "name": "Load inventory service image",
+          "command": "minikube image load go-microservice-inventory-service:latest",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 1,
+          "parentFolderId": "minikube-images"
+        },
+        {
+          "id": "i2-user-image",
+          "name": "Load user service image",
+          "command": "minikube image load go-microservice-user-service:latest",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 2,
+          "parentFolderId": "minikube-images"
+        },
+        {
+          "id": "i3-order-image",
+          "name": "Load order service image",
+          "command": "minikube image load go-microservice-order-service:latest",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 3,
+          "parentFolderId": "minikube-images"
+        },
+        {
+          "id": "i4-api-image",
+          "name": "Load API gateway image",
+          "command": "minikube image load go-microservice-api-gateway:latest",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 4,
+          "parentFolderId": "minikube-images"
+        },
+        {
+          "id": "i5-notification-image",
+          "name": "Load notification service image",
+          "command": "minikube image load go-microservice-notification-service:latest",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 5,
+          "parentFolderId": "minikube-images"
+        },
+        {
+          "id": "i6-load-all",
+          "name": "Load all images to Minikube",
+          "command": "cd ~/projects/Go-Microservice && ./load-images-to-minikube.sh",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 6,
+          "parentFolderId": "minikube-images"
+        },
+        {
+          "id": "i7-list-images",
+          "name": "List images in Minikube",
+          "command": "minikube ssh \"docker images | grep go-microservice\"",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 7,
+          "parentFolderId": "minikube-images"
+        },
+        {
+          "id": "kf1-list-topics",
+          "name": "List Kafka topics",
+          "command": "kubectl run kafka-client --rm -it --restart=Never -n kafka --image=confluentinc/cp-kafka:7.3.2 --command -- /bin/bash -c \"kafka-topics --bootstrap-server kafka-0.kafka-headless.kafka.svc.cluster.local:9092 --list\"",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 1,
+          "parentFolderId": "kafka-testing"
+        },
+        {
+          "id": "kf2-create-topic",
+          "name": "Create Kafka topic",
+          "command": "kubectl run kafka-client --rm -it --restart=Never -n kafka --image=confluentinc/cp-kafka:7.3.2 --command -- /bin/bash -c \"kafka-topics --bootstrap-server kafka-0.kafka-headless.kafka.svc.cluster.local:9092 --create --topic {{topic_name}} --partitions 1 --replication-factor 1\"",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 2,
+          "parentFolderId": "kafka-testing"
+        },
+        {
+          "id": "kf3-list-subjects",
+          "name": "List Schema Registry subjects",
+          "command": "kubectl run schema-registry-client --rm -it --restart=Never -n kafka --image=confluentinc/cp-schema-registry:7.3.2 --command -- /bin/bash -c \"curl -s http://schema-registry.kafka.svc.cluster.local:8081/subjects\"",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 3,
+          "parentFolderId": "kafka-testing"
+        },
+        {
+          "id": "d1-inventory-logs",
+          "name": "Check inventory service logs",
+          "command": "kubectl logs -n microservices deployment/inventory-service",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 1,
+          "parentFolderId": "debugging"
+        },
+        {
+          "id": "d2-service-logs",
+          "name": "Check service logs with follow",
+          "command": "kubectl logs -n microservices deployment/{{service_name}} -f",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 2,
+          "parentFolderId": "debugging"
+        },
+        {
+          "id": "d3-describe-service",
+          "name": "Describe service pod",
+          "command": "kubectl describe pod -n microservices -l app={{service_name}}",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 3,
+          "parentFolderId": "debugging"
+        },
+        {
+          "id": "d4-shell-service",
+          "name": "Shell into service pod",
+          "command": "kubectl exec -it -n microservices deployment/{{service_name}} -- /bin/sh",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 4,
+          "parentFolderId": "debugging"
+        },
+        {
+          "id": "d5-events",
+          "name": "Check Kubernetes events",
+          "command": "kubectl get events -n microservices --sort-by='.lastTimestamp'",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 5,
+          "parentFolderId": "debugging"
+        },
+        {
+          "id": "s1-build-script",
+          "name": "Make build script executable",
+          "command": "chmod +x ~/projects/Go-Microservice/build-all-services.sh",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 1,
+          "parentFolderId": "setup-scripts"
+        },
+        {
+          "id": "s2-load-script",
+          "name": "Make load images script executable",
+          "command": "chmod +x ~/projects/Go-Microservice/load-images-to-minikube.sh",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 2,
+          "parentFolderId": "setup-scripts"
+        },
+        {
+          "id": "s3-deploy-script",
+          "name": "Make deployment script executable",
+          "command": "chmod +x ~/projects/Go-Microservice/deploy-microservices.sh",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 3,
+          "parentFolderId": "setup-scripts"
+        },
+        {
+          "id": "s4-full-deploy",
+          "name": "Run full deployment",
+          "command": "cd ~/projects/Go-Microservice && ./deploy-all.sh",
+          "placeholderTypeId": "doubleCurlyBraces",
+          "sortOrder": 4,
+          "parentFolderId": "setup-scripts"
+        }
+      ],
+      "folders": [
+        {
+          "id": "docker-build",
+          "name": "Docker Build",
+          "sortOrder": 1,
+          "parentFolderId": null
+        },
+        {
+          "id": "minikube-management",
+          "name": "Minikube Management",
+          "sortOrder": 2,
+          "parentFolderId": null
+        },
+        {
+          "id": "kubernetes-helm",
+          "name": "Kubernetes & Helm",
+          "sortOrder": 3,
+          "parentFolderId": null
+        },
+        {
+          "id": "minikube-images",
+          "name": "Minikube Images",
+          "sortOrder": 4,
+          "parentFolderId": null
+        },
+        {
+          "id": "kafka-testing",
+          "name": "Kafka Testing",
+          "sortOrder": 5,
+          "parentFolderId": null
+        },
+        {
+          "id": "debugging",
+          "name": "Debugging",
+          "sortOrder": 6,
+          "parentFolderId": null
+        },
+        {
+          "id": "setup-scripts",
+          "name": "Setup Scripts",
+          "sortOrder": 7,
+          "parentFolderId": null
+        }
+      ]
+    }
+  }
+  

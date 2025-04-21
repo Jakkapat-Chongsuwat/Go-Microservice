@@ -7,7 +7,7 @@ kafka:
 externalKafka:
   # Explicitly include the protocol in the broker address
   brokers:
-    - "PLAINTEXT://kafka.kafka.svc.cluster.local:9092"
+    - "PLAINTEXT://kafka-controller-headless.kafka.svc.cluster.local:9092"
   listener:
     protocol: PLAINTEXT
 
@@ -18,7 +18,7 @@ schemaRegistryHeapOpts: "-Xmx512M -Xms512M"
 ## Custom configuration overrides
 ## These are crucial for fixing the connection issues
 customConfiguration: |-
-  kafkastore.bootstrap.servers=PLAINTEXT://kafka.kafka.svc.cluster.local:9092
+  kafkastore.bootstrap.servers=kafka-controller-headless.kafka.svc.cluster.local:9092
   kafkastore.security.protocol=PLAINTEXT
   debug=true
 

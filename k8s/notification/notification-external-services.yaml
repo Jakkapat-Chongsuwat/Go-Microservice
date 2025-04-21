@@ -17,7 +17,7 @@ metadata:
   namespace: notification-service
 spec:
   type: ExternalName
-  externalName: schema-registry-headless.schema-registry.svc.cluster.local
+  externalName: schema-registry-headless.kafka.svc.cluster.local
   ports:
     - name: schema-registry-port
       port: 8081

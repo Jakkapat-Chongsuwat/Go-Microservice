@@ -1,7 +1,15 @@
 FROM devopsfaith/krakend:latest
 RUN apk add --no-cache gettext
 COPY entrypoint.sh /entrypoint.sh
-COPY krakend.json.tpl /etc/krakend/krakend.json.tpl
+COPY krakend.json.tmpl /etc/krakend/krakend.json.tmpl
 RUN chmod +x /entrypoint.sh
+
+# Set reasonable defaults (will be overridden by environment variables)
+ENV ORDER_SERVICE_URL="http://order-service:60052"
+ENV USER_SERVICE_URL="http://user-service:50052"
+ENV INVENTORY_SERVICE_URL="http://inventory-service:30052"
+ENV NOTIFICATION_SERVICE_URL="http://notification-service:20052"
+
+# Use non-root user for Kubernetes security policies
 USER 1000
 ENTRYPOINT ["/entrypoint.sh"]

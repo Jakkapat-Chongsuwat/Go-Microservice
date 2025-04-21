@@ -2,6 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: user-db-migration
+  namespace: user-service
 spec:
   template:
     spec:

@@ -19,21 +19,26 @@ spec:
         ports:
         - containerPort: 8080
         imagePullPolicy: IfNotPresent
-        command: ["/usr/bin/krakend"]
-        args: ["run", "-d", "-c", "/etc/krakend/krakend.json", "-p", "8080"]
+        command: ["/entrypoint.sh"]
         securityContext:
           allowPrivilegeEscalation: false
           runAsNonRoot: true
           runAsUser: 1000
-          readOnlyRootFilesystem: true
+          readOnlyRootFilesystem: false
           capabilities:
             drop:
               - ALL
             add:
               - NET_BIND_SERVICE
         env:
-        - name: KRAKEND_PORT
-          value: "8080"
+        - name: ORDER_SERVICE_URL
+          value: "http://order-service.order-service.svc.cluster.local:60052"
+        - name: USER_SERVICE_URL
+          value: "http://user-service.user-service.svc.cluster.local:50052"
+        - name: INVENTORY_SERVICE_URL
+          value: "http://inventory-service.inventory-service.svc.cluster.local:30052"
+        - name: NOTIFICATION_SERVICE_URL
+          value: "http://notification-service.notification-service.svc.cluster.local:20052"
         resources:
           requests:
             cpu: "100m"
@@ -41,3 +46,15 @@ spec:
           limits:
             cpu: "300m"
             memory: "512Mi"
+        readinessProbe:
+          httpGet:
+            path: /__health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /__health
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 15

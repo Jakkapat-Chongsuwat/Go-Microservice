@@ -13,41 +13,9 @@ spec:
       labels:
         app: inventory-service
     spec:
-      initContainers:
-        - name: wait-for-dependencies
-          image: busybox
-          command: ["/bin/sh", "-c"]
-          args:
-            - |
-              echo "Waiting for inventory-service-db:5557..."
-              until nc -z inventory-service-db 5557; do
-                echo "DB not ready; retry in 5s..."
-                sleep 5
-              done
-              
-              echo "Waiting for kafka:9092..."
-              until nc -z kafka 9092; do
-                echo "Kafka not ready; retry in 5s..."
-                sleep 5
-              done
-              
-              echo "Waiting for schema-registry:8081..."
-              until nc -z schema-registry 8081; do
-                echo "Schema Registry not ready; retry in 5s..."
-                sleep 5
-              done
-              
-              echo "All dependencies ready! Starting inventory-service..."
-          resources:
-            requests:
-              cpu: "50m"
-              memory: "64Mi"
-            limits:
-              cpu: "100m"
-              memory: "128Mi"
       containers:
         - name: inventory-service
-          image: docker.io/library/go-microservice-inventory-service:latest
+          image: go-microservice-inventory-service:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 30051

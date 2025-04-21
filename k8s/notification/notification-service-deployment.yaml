@@ -40,7 +40,7 @@ spec:
               memory: "128Mi"
       containers:
         - name: notification-service
-          image: docker.io/library/go-microservice-notification-service:latest
+          image: go-microservice-notification-service:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 20051

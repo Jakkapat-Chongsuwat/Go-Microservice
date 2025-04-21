@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: user-service
+  namespace: user-service
 spec:
   replicas: 1
   selector:
@@ -33,7 +34,7 @@ spec:
               memory: "128Mi"
       containers:
         - name: user-service
-          image: docker.io/library/go-microservice-user-service:latest
+          image: go-microservice-user-service:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 50051
@@ -73,6 +74,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: user-service
+  namespace: user-service
 spec:
   selector:
     app: user-service
