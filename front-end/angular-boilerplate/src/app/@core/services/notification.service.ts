@@ -1,88 +1,81 @@
-import { Injectable } from '@angular/core';
-import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
-import { Observable, Subject, timer, throwError, EMPTY } from 'rxjs';
-import { catchError, retryWhen, switchMap, tap, delay } from 'rxjs/operators';
+import { Injectable, OnDestroy } from '@angular/core';
+import { Observable, Subject } from 'rxjs';
 import { Logger } from './misc/logger.service';
 import { environment } from '@env/environment';
 
 @Injectable({
   providedIn: 'root',
 })
-export class NotificationService {
+export class NotificationService implements OnDestroy {
   private WS_URL = environment.websocketUrl;
-  private socket$: WebSocketSubject<any> | null = null;
+  private ws: WebSocket | null = null;
   private notificationsSubject = new Subject<any>();
   private readonly logger = new Logger('NotificationService');
   private reconnectionAttempts = 0;
   private readonly MAX_RECONNECT_ATTEMPTS = 5;
+  private reconnectTimeout: any = null;
 
   constructor() {
-    this.connect();
+    // Log the exact URL we're trying to connect to
+    console.log('WebSocket URL:', this.WS_URL);
+
+    // Wait a bit for Angular to fully initialize
+    setTimeout(() => this.connect(), 1000);
   }
 
-  /**
-   * Connect to the WebSocket endpoint and manage reconnection.
-   */
   private connect(): void {
-    if (this.socket$ !== null) {
-      this.socket$.complete();
-      this.socket$ = null;
+    // Close existing connection if any
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
     }
 
     this.logger.info(`Connecting to WebSocket at ${this.WS_URL}...`);
 
-    // Check if URL is valid
     if (!this.WS_URL || this.WS_URL === '') {
       this.logger.error('WebSocket URL is not defined in environment');
       return;
     }
 
-    this.socket$ = webSocket({
-      url: this.WS_URL,
-      // Use a simple pass-through deserializer to handle both JSON and text
-      deserializer: (e) => {
-        try {
-          // Try to parse as JSON first
-          return JSON.parse(e.data);
-        } catch (err) {
-          // If not valid JSON, return as text
-          return e.data;
-        }
-      },
-      openObserver: {
-        next: () => {
-          this.logger.info('WebSocket connected successfully');
-          this.reconnectionAttempts = 0; // Reset counter on successful connection
-        },
-      },
-      closeObserver: {
-        next: (event) => {
-          this.logger.warn(`WebSocket connection closed with code ${event.code}`);
-          this.reconnect();
-        }
-      }
-    });
+    try {
+      // Create a native WebSocket connection
+      this.ws = new WebSocket(this.WS_URL);
 
-    this.socket$
-      .pipe(
-        catchError((err) => {
-          this.logger.error('WebSocket error:', err);
-          this.reconnect();
-          return EMPTY;
-        })
-      )
-      .subscribe({
-        next: (message) => {
-          this.logger.debug('Received WebSocket message:', message);
-          this.notificationsSubject.next(message);
-        },
-        error: (error) => {
-          this.logger.error('WebSocket subscription error:', error);
-        },
-        complete: () => {
-          this.logger.warn('WebSocket connection completed.');
-        },
-      });
+      // Set up event handlers
+      this.ws.onopen = () => {
+        this.logger.info('WebSocket connected successfully');
+        this.reconnectionAttempts = 0;
+      };
+
+      this.ws.onmessage = (event) => {
+        try {
+          const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+          this.logger.debug('Received WebSocket message:', data);
+          this.notificationsSubject.next(data);
+        } catch (error) {
+          this.logger.error('Error parsing WebSocket message:', error);
+          this.notificationsSubject.next(event.data);
+        }
+      };
+
+      this.ws.onerror = (error) => {
+        this.logger.error('WebSocket error:', error);
+        // Log more details for debugging
+        console.error('WebSocket error details:', {
+          url: this.WS_URL,
+          readyState: this.ws?.readyState,
+          error: error
+        });
+      };
+
+      this.ws.onclose = (event) => {
+        this.logger.warn(`WebSocket connection closed with code ${event.code}`);
+        this.reconnect();
+      };
+    } catch (error) {
+      this.logger.error('Error creating WebSocket:', error);
+      this.reconnect();
+    }
   }
 
   private reconnect(): void {
@@ -91,7 +84,7 @@ export class NotificationService {
       const delay = Math.min(this.reconnectionAttempts * 2000, 10000);
       this.logger.info(`Attempting reconnection ${this.reconnectionAttempts}/${this.MAX_RECONNECT_ATTEMPTS} in ${delay}ms`);
 
-      setTimeout(() => {
+      this.reconnectTimeout = setTimeout(() => {
         this.connect();
       }, delay);
     } else {
@@ -103,20 +96,23 @@ export class NotificationService {
     return this.notificationsSubject.asObservable();
   }
 
-  // Method to manually send a message (optional)
   sendMessage(message: any): void {
-    if (this.socket$ && !this.socket$.closed) {
-      // Let RxJS handle the serialization as per version
-      this.socket$.next(message);
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      const data = typeof message === 'string' ? message : JSON.stringify(message);
+      this.ws.send(data);
     } else {
       this.logger.error('Cannot send message - WebSocket is not connected');
     }
   }
 
-  // Properly close the connection when the service is destroyed
   ngOnDestroy() {
-    if (this.socket$) {
-      this.socket$.complete();
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
     }
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    this.notificationsSubject.complete();
   }
 }

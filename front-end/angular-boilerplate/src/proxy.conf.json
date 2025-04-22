@@ -1,7 +1,0 @@
-{
-  "/ws": {
-    "target": "ws://192.168.49.2:20052",
-    "secure": false,
-    "ws": true
-  }
-}
