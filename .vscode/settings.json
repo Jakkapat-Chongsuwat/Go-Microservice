@@ -1,5 +1,12 @@
 {
-  "cSpell.words": ["dtos", "ngneat", "ngxpert", "usecases"],
+  "cSpell.words": [
+    "AKIAZNIP",
+    "dtos",
+    "ngneat",
+    "ngxpert",
+    "usecases",
+    "XATGBSU"
+  ],
   "peacock.color": "#42b883",
   "yaml.schemas": {
     "kubernetes": "*.yaml",
