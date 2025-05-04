@@ -1,0 +1,30 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Your release is named {{ .Release.Name }}.
+
+To get the application URL:
+{{- if .Values.ingress.enabled }}
+  {{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+  {{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Values.namespace.name }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "user-service.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Values.namespace.name }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+        You can watch the status by running:
+        kubectl get --namespace {{ .Values.namespace.name }} svc -w {{ include "user-service.fullname" . }}
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Values.namespace.name }} {{ include "user-service.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ (index .Values.service.ports 1).port }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+  kubectl port-forward --namespace {{ .Values.namespace.name }} svc/{{ include "user-service.fullname" . }} {{ (index .Values.service.ports 1).port }}:{{ (index .Values.service.ports 1).port }}
+  echo "Visit http://127.0.0.1:{{ (index .Values.service.ports 1).port }} to use your application"
+{{- end }}
+
+To check the gRPC service:
+  kubectl port-forward --namespace {{ .Values.namespace.name }} svc/{{ include "user-service.fullname" . }} {{ (index .Values.service.ports 0).port }}:{{ (index .Values.service.ports 0).port }}
+  echo "The gRPC service is available at localhost:{{ (index .Values.service.ports 0).port }}"
+
+To see the database migration status:
+  kubectl logs --namespace {{ .Values.namespace.name }} jobs/{{ include "user-service.fullname" . }}-db-migration

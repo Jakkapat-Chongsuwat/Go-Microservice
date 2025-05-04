@@ -1,0 +1,32 @@
+global:
+  environment: development
+
+replicaCount: 1
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+rbac:
+  rules:
+    - apiGroups: [""]
+      resources: ["configmaps", "secrets"]
+      verbs: ["get", "list"]
+    - apiGroups: [""]
+      resources: ["pods", "services"]
+      verbs: ["get", "list", "watch"]
+
+postgresql:
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+  persistence:
+    size: 1Gi

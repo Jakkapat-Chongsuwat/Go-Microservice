@@ -1,0 +1,15 @@
+{{- if .Values.migration.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "user-service.fullname" . }}-migrations
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "user-service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+data:
+  {{- range $filename, $content := .Values.migration.migrations }}
+  {{ $filename }}: |
+{{ $content | indent 4 }}
+  {{- end }}
+{{- end }}

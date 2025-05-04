@@ -1,80 +1,104 @@
 // index.ts
 import * as pulumi from "@pulumi/pulumi";
-import { Vpc } from "./components/vpc";
-import { EksCluster } from "./components/eks-cluster";
 
-// Create a stack-specific configuration
-const config = new pulumi.Config();
-const projectName = pulumi.getProject();
-const stackName = pulumi.getStack();
+// Import infrastructure stacks
+import { NetworkStack } from "./infrastructure/networking";
+import { ComputeStack } from "./infrastructure/compute";
+import { StorageStack } from "./infrastructure/storage";
+import { ObservabilityStack } from "./infrastructure/observability";
 
-// Create the VPC
-const vpc = new Vpc(`${projectName}-${stackName}`, {
+// Import service deployment
+import { UserServiceDeployment } from "./services/user-service";
+
+// Import configuration and utilities
+import { getConfig, getEnvironmentConfig } from "./config/environment";
+import { createResourceTags } from "./utils/tagging";
+
+/**
+ * Main Application Stack
+ *
+ * This is the main entry point for the infrastructure deployment.
+ * It orchestrates the creation of all infrastructure components.
+ */
+export function deployInfrastructure(): void {
+  // Initialize configuration
+  const config = getConfig();
+  const envConfig = getEnvironmentConfig(pulumi.getStack());
+  const baseTags = createResourceTags(config.projectName, pulumi.getStack());
+
+  // Create networking infrastructure
+  const network = new NetworkStack("network", {
     cidrBlock: "10.0.0.0/16",
-    availabilityZones: ["a", "b", "c"], 
-    tags: {
-        Project: projectName,
-        Environment: stackName,
-        ManagedBy: "pulumi"
-    }
-});
+    availabilityZones: ["a", "b", "c"],
+    tags: baseTags,
+  });
 
-// Create the EKS cluster with multiple node groups
-const eksCluster = new EksCluster(`${projectName}-${stackName}`, {
-    vpcId: vpc.vpc.id,
-    subnetIds: vpc.privateSubnetIds, 
-    version: "1.28",
-    nodeGroups: [
-        // General purpose nodes
-        {
-            name: "standard",
-            instanceTypes: ["t3.medium"],
-            desiredSize: 2,
-            minSize: 1,
-            maxSize: 5,
-            labels: {
-                "workload-type": "standard"
-            }
-        },
-        // Compute-optimized nodes for CPU-intensive workloads
-        {
-            name: "compute",
-            instanceTypes: ["c5.xlarge"],
-            desiredSize: 2,
-            minSize: 1,
-            maxSize: 10,
-            labels: {
-                "workload-type": "cpu-intensive"
-            }
-        },
-        // Spot instances for cost optimization
-        {
-            name: "spot",
-            instanceTypes: ["t3.large", "t3.xlarge"],
-            desiredSize: 1,
-            minSize: 0,
-            maxSize: 10,
-            capacityType: "SPOT",
-            labels: {
-                "workload-type": "spot"
-            },
-            taints: [
-                {
-                    key: "spot",
-                    value: "true",
-                    effect: "NO_SCHEDULE"
-                }
-            ]
-        }
-    ],
-    tags: {
-        Project: projectName,
-        Environment: stackName,
-        ManagedBy: "pulumi"
-    }
-});
+  // Create compute infrastructure (EKS cluster and node groups)
+  const compute = new ComputeStack("compute", {
+    network: network,
+    kubernetesVersion: "1.28",
+    nodeGroups: envConfig.nodeGroups,
+    tags: baseTags,
+  });
 
-// Export values
-export const vpcId = vpc.vpc.id;
-export const kubeconfig = eksCluster.kubeconfig;
-export const clusterName = eksCluster.cluster.eksCluster.name;
+  // Create storage resources (ECR repositories)
+  const storage = new StorageStack("storage", {
+    projectName: config.projectName,
+    tags: baseTags,
+  });
+
+  // Deploy user service
+  const userService = new UserServiceDeployment("user-service", {
+    cluster: compute.cluster,
+    k8sProvider: compute.k8sProvider,
+    appRepository: storage.appRepository,
+    helmRepository: storage.helmRepository,
+    environment: pulumi.getStack(),
+    dbPassword: config.dbPassword,
+    tags: baseTags,
+  });
+
+  // Set up monitoring and observability
+  const observability = new ObservabilityStack("observability", {
+    cluster: compute.cluster,
+    k8sProvider: compute.k8sProvider,
+    grafanaPassword: config.grafanaPassword,
+    nodeSelector: {
+      "workload-type": "standard",
+    },
+    tags: baseTags,
+  });
+
+  // Export stack outputs
+  exportStackOutputs(network, compute, storage, userService, observability);
+}
+
+/**
+ * Export the stack outputs
+ */
+function exportStackOutputs(
+  network: NetworkStack,
+  compute: ComputeStack,
+  storage: StorageStack,
+  userService: UserServiceDeployment,
+  observability: ObservabilityStack
+): void {
+  // Export infrastructure information
+  exports.vpcId = network.vpcId;
+  exports.kubeconfig = compute.kubeconfig;
+  exports.clusterName = compute.clusterName;
+
+  // Export repository URLs
+  exports.userServiceImageRepo = storage.appRepositoryUrl;
+  exports.helmChartsRepo = storage.helmRepositoryUrl;
+
+  // Export service endpoints
+  exports.userServiceHttpUrl = userService.httpEndpoint;
+  exports.userServiceGrpcUrl = userService.grpcEndpoint;
+
+  // Export monitoring endpoints
+  exports.grafanaEndpoint = observability.grafanaEndpoint;
+}
+
+// Deploy the infrastructure
+deployInfrastructure();

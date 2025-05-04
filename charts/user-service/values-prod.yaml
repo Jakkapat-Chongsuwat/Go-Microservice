@@ -1,0 +1,87 @@
+global:
+  environment: production
+
+replicaCount: 3
+
+image:
+  pullPolicy: Always
+  tag: "latest"
+
+rbac:
+  rules:
+    - apiGroups: [""]
+      resources: ["configmaps"]
+      verbs: ["get"]
+      resourceNames: ["user-service-config"]
+    - apiGroups: [""]
+      resources: ["pods"]
+      verbs: ["get"]
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: api.your-domain.com
+      paths:
+        - path: /
+          pathType: Prefix
+          port: 50052
+  tls:
+    - secretName: user-service-tls-cert
+      hosts:
+        - api.your-domain.com
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+postgresql:
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  persistence:
+    size: 10Gi
+    storageClass: "managed-premium"
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - user-service
+        topologyKey: "kubernetes.io/hostname"

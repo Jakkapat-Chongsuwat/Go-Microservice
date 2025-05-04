@@ -804,6 +804,13 @@
     docker-classic "npm:@pulumi/docker@3.6.1"
     mime "^2.0.0"
 
+"@pulumi/command@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@pulumi/command/-/command-1.0.2.tgz#079010eab572283b49a494d9c04ec907df6ac5e2"
+  integrity sha512-1Pge79T3E2bzIAvLXuYI4uczhjpqQYgnpkvLHRag/idyCmhXCV7JP+NOXLA/7RARdr8ftuZL+BEvXpJibju7jA==
+  dependencies:
+    "@pulumi/pulumi" "^3.142.0"
+
 "@pulumi/docker-build@^0.0.8":
   version "0.0.8"
   resolved "https://registry.yarnpkg.com/@pulumi/docker-build/-/docker-build-0.0.8.tgz#203bdd9eed062ed0d3ddd2ef275ffcc45a87b3f4"
@@ -1373,6 +1380,11 @@
   version "4.0.4"
   resolved "https://registry.yarnpkg.com/@types/http-cache-semantics/-/http-cache-semantics-4.0.4.tgz#b979ebad3919799c979b17c72621c0bc0a31c6c4"
   integrity sha512-1m0bIFVc7eJWyve9S0RnuRgcQqF/Xd5QsUZAZeQFr1Q3/p9JWoQQEqmVy+DPTNpGXwhgIetAoYF8JSc33q29QA==
+
+"@types/js-yaml@^4.0.9":
+  version "4.0.9"
+  resolved "https://registry.yarnpkg.com/@types/js-yaml/-/js-yaml-4.0.9.tgz#cd82382c4f902fed9691a2ed79ec68c5898af4c2"
+  integrity sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==
 
 "@types/keyv@^3.1.4":
   version "3.1.4"
@@ -2013,6 +2025,11 @@ json-stringify-nice@^1.1.4:
   version "1.1.4"
   resolved "https://registry.yarnpkg.com/json-stringify-nice/-/json-stringify-nice-1.1.4.tgz#2c937962b80181d3f317dd39aa323e14f5a60a67"
   integrity sha512-5Z5RFW63yxReJ7vANgW6eZFGWaQvnPE3WNmZoOJrSkGju2etKA2L5rrOa1sm877TVTFt57A80BH1bArcmlLfPw==
+
+json5@^2.2.2:
+  version "2.2.3"
+  resolved "https://registry.yarnpkg.com/json5/-/json5-2.2.3.tgz#78cd6f1a19bdc12b73db5ad0c61efd66c1e29283"
+  integrity sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==
 
 jsonparse@^1.3.1:
   version "1.3.1"
@@ -2738,6 +2755,11 @@ strip-ansi@^7.0.1:
   dependencies:
     ansi-regex "^6.0.1"
 
+strip-bom@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/strip-bom/-/strip-bom-3.0.0.tgz#2334c18e9c759f7bdd56fdef7e9ae3d588e68ed3"
+  integrity sha512-vavAMRXOgBVNF6nyEEmL3DBK19iRpDcoIwW+swQ+CbGiu7lju6t+JklA1MHweoWtadgt4ISVUsXLyDq34ddcwA==
+
 strip-final-newline@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/strip-final-newline/-/strip-final-newline-2.0.0.tgz#89b852fb2fcbe936f6f4b3187afb0a12c1ab58ad"
@@ -2774,6 +2796,15 @@ treeverse@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/treeverse/-/treeverse-3.0.0.tgz#dd82de9eb602115c6ebd77a574aae67003cb48c8"
   integrity sha512-gcANaAnd2QDZFmHFEOF4k7uc1J/6a6z3DJMd/QwEyxLoKGiptJRwid582r7QIsFlFMIZ3SnxfS52S4hm2DHkuQ==
+
+tsconfig-paths@^4.2.0:
+  version "4.2.0"
+  resolved "https://registry.yarnpkg.com/tsconfig-paths/-/tsconfig-paths-4.2.0.tgz#ef78e19039133446d244beac0fd6a1632e2d107c"
+  integrity sha512-NoZ4roiN7LnbKn9QqE1amc9DJfzvZXxF4xDavcOWt1BPkdx+m+0gJuPM+S0vCe7zTJMYUP0R8pO2XMr+Y8oLIg==
+  dependencies:
+    json5 "^2.2.2"
+    minimist "^1.2.6"
+    strip-bom "^3.0.0"
 
 tslib@^2.6.2:
   version "2.8.1"

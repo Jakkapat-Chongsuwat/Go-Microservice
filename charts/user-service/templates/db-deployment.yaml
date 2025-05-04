@@ -1,0 +1,91 @@
+{{- if .Values.postgresql.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "user-service.fullname" . }}-db
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "user-service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "user-service.fullname" . }}-db
+  template:
+    metadata:
+      labels:
+        app: {{ include "user-service.fullname" . }}-db
+    spec:
+      securityContext:
+        fsGroup: {{ .Values.postgresql.securityContext.fsGroup }}
+      {{- if .Values.postgresql.initContainer.enabled }}
+      initContainers:
+        - name: fix-permissions
+          image: alpine:3.17
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: true
+          command: ["sh", "-c"]
+          args:
+            - >
+              echo "Fixing permissions in /var/lib/postgresql/data...";
+              chown -R {{ .Values.postgresql.securityContext.runAsUser }}:{{ .Values.postgresql.securityContext.runAsGroup }} /var/lib/postgresql/data &&
+              chmod -R 700 /var/lib/postgresql/data;
+          volumeMounts:
+            - name: {{ include "user-service.fullname" . }}-data
+              mountPath: /var/lib/postgresql/data
+      {{- end }}
+      containers:
+        - name: {{ include "user-service.fullname" . }}-db
+          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+          imagePullPolicy: {{ .Values.postgresql.image.pullPolicy }}
+          securityContext:
+            runAsUser: {{ .Values.postgresql.securityContext.runAsUser }}
+            runAsGroup: {{ .Values.postgresql.securityContext.runAsGroup }}
+            allowPrivilegeEscalation: false
+          args: ["-p", "{{ .Values.postgresql.port }}"]
+          ports:
+            - containerPort: {{ .Values.postgresql.port }}
+          env:
+            - name: POSTGRES_USER
+              value: "{{ .Values.config.db.user }}"
+            - name: POSTGRES_PASSWORD
+              value: "{{ .Values.config.db.password }}"
+            - name: POSTGRES_DB
+              value: "{{ .Values.config.db.name }}"
+          volumeMounts:
+            - name: {{ include "user-service.fullname" . }}-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.config.db.user }}
+                - -d
+                - {{ .Values.config.db.name }}
+                - -p
+                - "{{ .Values.postgresql.port }}"
+            initialDelaySeconds: {{ .Values.postgresql.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.postgresql.probes.readiness.periodSeconds }}
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.config.db.user }}
+                - -d
+                - {{ .Values.config.db.name }}
+                - -p
+                - "{{ .Values.postgresql.port }}"
+            initialDelaySeconds: {{ .Values.postgresql.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.postgresql.probes.liveness.periodSeconds }}
+          resources:
+            {{- toYaml .Values.postgresql.resources | nindent 12 }}
+      volumes:
+        - name: {{ include "user-service.fullname" . }}-data
+          persistentVolumeClaim:
+            claimName: {{ include "user-service.fullname" . }}-data-pvc
+{{- end }}

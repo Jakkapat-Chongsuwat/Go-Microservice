@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "user-service.fullname" . }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "user-service.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "user-service.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "user-service.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "user-service.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: wait-for-db
+          image: busybox
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              echo "Waiting for {{ .Values.config.db.host }} (port {{ .Values.config.db.port }})...";
+              until nc -z {{ .Values.config.db.host }} {{ .Values.config.db.port }}; do
+                echo "DB not ready; retrying in 5s...";
+                sleep 5;
+              done;
+              echo "DB is up! Proceeding...";
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.config.service.grpcPort }}
+              protocol: TCP
+            - name: http
+              containerPort: {{ .Values.config.service.httpPort }}
+              protocol: TCP
+          env:
+            - name: DB_HOST
+              value: "{{ .Values.config.db.host }}"
+            - name: DB_USER
+              value: "{{ .Values.config.db.user }}"
+            - name: DB_PASS
+              value: "{{ .Values.config.db.password }}"
+            - name: DB_NAME
+              value: "{{ .Values.config.db.name }}"
+            - name: DB_SCHEMA
+              value: "{{ .Values.config.db.schema }}"
+            - name: REPO_TYPE
+              value: "{{ .Values.config.service.repoType }}"
+            - name: DB_DRIVER
+              value: "{{ .Values.config.db.driver }}"
+            - name: DB_SSLMODE
+              value: "{{ .Values.config.db.sslmode }}"
+            - name: DB_PORT
+              value: "{{ .Values.config.db.port }}"
+            - name: GRPC_PORT
+              value: "{{ .Values.config.service.grpcPort }}"
+            - name: HTTP_PORT
+              value: "{{ .Values.config.service.httpPort }}"
+            - name: ENV
+              value: {{ .Values.global.environment }}
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

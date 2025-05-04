@@ -1,0 +1,48 @@
+{
+	"folders": [
+		{
+			"path": "api-gateway"
+		},
+		{
+			"path": "charts"
+		},
+		{
+			"path": "front-end"
+		},
+		{
+			"path": "inventory-service"
+		},
+		{
+			"path": "k8s"
+		},
+		{
+			"path": "notification-service"
+		},
+		{
+			"path": "order-service"
+		},
+		{
+			"path": "proto"
+		},
+		{
+			"path": "pulumi"
+		},
+		{
+			"path": "user-service"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {},
+	"extensions": {
+		"recommendations": [
+			"ms-vscode-remote.remote-wsl",
+			"esbenp.prettier-vscode",
+			"github.copilot",
+			"github.copilot-chat",
+			"christian-kohler.path-intellisense",
+			"pkief.material-icon-theme"
+		]
+	}
+}

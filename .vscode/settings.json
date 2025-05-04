@@ -12,7 +12,8 @@
     "kubernetes": "*.yaml",
     "https://json.schemastore.org/helmfile.json": [
       "file:///d%3A/Learning/Go-Microservice/k8s/kafka.yaml",
-      "file:///mnt/d/Learning/Go-Microservice/k8s/schema-registry.yaml"
+      "file:///mnt/d/Learning/Go-Microservice/k8s/schema-registry.yaml",
+      "file:///home/top/projects/Go-Microservice/charts/user-service/Chart.yaml"
     ]
   }
 }

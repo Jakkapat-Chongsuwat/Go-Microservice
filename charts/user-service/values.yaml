@@ -1,0 +1,197 @@
+global:
+  environment: development
+
+namespace:
+  create: true
+  name: "user-service"
+
+replicaCount: 1
+
+image:
+  repository: go-microservice-user-service
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+rbac:
+  create: true
+  rules:
+    - apiGroups: [""]
+      resources: ["configmaps"]
+      verbs: ["get"]
+    - apiGroups: [""]
+      resources: ["pods"]
+      verbs: ["get", "list"]
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels:
+  app.kubernetes.io/component: api
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
+service:
+  type: ClusterIP
+  ports:
+    - name: grpc
+      port: 50051
+      targetPort: 50051
+      protocol: TCP
+    - name: http
+      port: 50052
+      targetPort: 50052
+      protocol: TCP
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: user-service.local
+      paths:
+        - path: /
+          pathType: Prefix
+          port: 50052
+  tls: []
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 50052
+  initialDelaySeconds: 15
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 50052
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80  
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+config:
+  db:
+    host: "user-service-db"
+    user: "devuser"
+    password: "devpass" 
+    name: "user_service"
+    schema: "user_service"
+    port: 5555
+    sslmode: "disable"
+    driver: "postgres"
+  service:
+    repoType: "gorm"
+    grpcPort: 50051
+    httpPort: 50052
+
+postgresql:
+  enabled: true
+  image:
+    repository: postgres
+    tag: 15-alpine
+    pullPolicy: IfNotPresent
+  port: 5555
+  resources:
+    limits:
+      cpu: 300m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+  securityContext:
+    fsGroup: 999
+    runAsUser: 999
+    runAsGroup: 999
+  initContainer:
+    enabled: true
+  probes:
+    liveness:
+      initialDelaySeconds: 10
+      periodSeconds: 10
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+migration:
+  enabled: true
+  image:
+    repository: migrate/migrate
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  migrations:
+    "20250215145424_init_schema.up.sql": |
+      -- Create "set_updated_at" function
+      CREATE OR REPLACE FUNCTION public.set_updated_at() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        NEW.updated_at := now();
+        RETURN NEW;
+      END;
+      $$;
+      
+      -- Create "users" table
+      CREATE TABLE public.users (
+        "id" character varying(255) NOT NULL,
+        "username" character varying(255) NOT NULL,
+        "email" character varying(255) NOT NULL,
+        "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "deleted_at" timestamp NULL,
+        PRIMARY KEY ("id")
+      );
+      
+      -- Create trigger "users_update_timestamp_trigger"
+      CREATE TRIGGER "users_update_timestamp_trigger" 
+      BEFORE UPDATE ON public.users 
+      FOR EACH STATEMENT 
+      EXECUTE FUNCTION public.set_updated_at();
