@@ -13,10 +13,13 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@component/*": ["components/*"],
-      "@utils/*": ["components/utils/*"],
-      "@types": ["components/types"]
+      "@components/*": ["src/components/*"],
+      "@utils/*": ["src/utils/*"],
+      "@types": ["src/components/types"],
+      "@config/*": ["src/config/*"],
+      "@infrastructure/*": ["src/infrastructure/*"],
+      "@services/*": ["src/services/*"]
     }
   },
-  "include": ["index.ts", "components/**/*.ts"]
+  "include": ["**/*.ts"]
 }
