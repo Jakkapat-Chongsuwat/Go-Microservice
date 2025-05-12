@@ -14,11 +14,6 @@ export interface AppConfig {
   projectName: string;
 
   /**
-   * Project staging environment (dev, staging, production)
-   */
-  environment: string;
-
-  /**
    * AWS region to deploy resources
    */
   region: string;

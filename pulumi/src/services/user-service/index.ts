@@ -1,87 +1,65 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as k8s from "@pulumi/kubernetes";
-import { createComponentName } from "../../utils/naming";
+import { createComponentName } from "@utils/naming";
 import { UserServiceDeployment } from "./deployment";
-import { EcrRepositoryResource } from "../../infrastructure/storage/ecr";
-import { EksClusterResource } from "../../infrastructure/compute/eks";
+import { EcrRepositoryResource } from "@infrastructure/storage/ecr";
+import { EksClusterResource } from "@infrastructure/compute/eks";
 import {
   getAppConfig,
   getDatabaseConfig,
   getUserServiceConfig,
-} from "../../config/environment";
+} from "@config/environment";
 
+/**
+ * Configuration arguments for the UserService
+ */
 export interface UserServiceArgs {
-  /**
-   * EKS cluster to deploy into
-   */
+  /** EKS cluster to deploy into */
   cluster: EksClusterResource;
 
-  /**
-   * Kubernetes provider
-   */
+  /** Kubernetes provider */
   k8sProvider: k8s.Provider;
 
-  /**
-   * Application repository
-   */
+  /** Application repository */
   appRepository: EcrRepositoryResource;
 
-  /**
-   * Helm chart repository
-   */
+  /** Helm chart repository */
   helmRepository: EcrRepositoryResource;
 
-  /**
-   * Environment name (dev, staging, production)
-   */
+  /** Environment name (dev, staging, production) */
   environment: string;
 
-  /**
-   * Database password (secret)
-   */
+  /** Database password (secret) */
   dbPassword: pulumi.Input<string>;
 
-  /**
-   * AWS region (as string, not Output)
-   */
+  /** AWS region */
   region: string;
 
-  /**
-   * Tags to apply to resources
-   */
+  /** Tags to apply to resources */
   tags?: Record<string, string>;
+
+  /** Pre-loaded chart values */
+  preloadedValues?: any;
 }
 
 /**
  * UserService manages all resources for the user service
  */
 export class UserService {
-  /**
-   * Kubernetes namespace
-   */
+  /** Kubernetes namespace */
   public readonly namespace: k8s.core.v1.Namespace;
 
-  /**
-   * Service deployment
-   */
+  /** Service deployment */
   public readonly deployment: UserServiceDeployment;
 
-  /**
-   * HTTP endpoint
-   */
+  /** HTTP endpoint */
   public readonly httpEndpoint: pulumi.Output<string>;
 
-  /**
-   * gRPC endpoint
-   */
+  /** gRPC endpoint */
   public readonly grpcEndpoint: pulumi.Output<string>;
 
   /**
    * Creates a new user service
-   *
-   * @param name Resource name
-   * @param args Service configuration
-   * @param opts Additional resource options
    */
   constructor(
     name: string,
@@ -111,7 +89,7 @@ export class UserService {
       }
     );
 
-    // Create database password secret that the Helm chart can reference
+    // Create database password secret
     const dbSecret = new k8s.core.v1.Secret(
       createComponentName(name, "db-secret"),
       {
@@ -122,7 +100,7 @@ export class UserService {
         type: "Opaque",
         stringData: {
           username: dbConfig.dbUsername,
-          password: args.dbPassword, // Use the provided password
+          password: args.dbPassword,
         },
       },
       {
@@ -132,8 +110,7 @@ export class UserService {
       }
     );
 
-    // Internal database service name (for in-cluster communication)
-    // Assume your Helm chart creates this service with this naming convention
+    // Internal database service name
     const dbServiceName = `${name}-postgresql`;
 
     // Deploy the service
@@ -148,7 +125,8 @@ export class UserService {
         serviceConfig: serviceConfig,
         dbConfig: dbConfig,
         dbServiceName: dbServiceName,
-        region: args.region, // Pass the string region directly
+        region: args.region,
+        preloadedChartValues: args.preloadedValues,
       },
       args.k8sProvider,
       {
@@ -157,7 +135,7 @@ export class UserService {
       }
     );
 
-    // Export service endpoints
+    // Export endpoints
     this.httpEndpoint = this.deployment.httpEndpoint;
     this.grpcEndpoint = this.deployment.grpcEndpoint;
   }

@@ -15,11 +15,12 @@
     "@pulumi/random": "^4.18.2",
     "@types/js-yaml": "^4.0.9",
     "install": "^0.13.0",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.0",
+    "yaml": "^2.7.1"
   },
   "scripts": {
-    "preview": "pulumi preview",
-    "up": "pulumi up",
-    "destroy": "pulumi destroy"
+    "preview": "PULUMI_DEBUG_PROMISE_LEAKS=true pulumi preview -v=9",
+    "up": "PULUMI_DEBUG=1 pulumi up --logtostderr -v=9",
+    "destroy": "PULUMI_DEBUG_PROMISE_LEAKS=true pulumi destroy -v=9"
   }
 }

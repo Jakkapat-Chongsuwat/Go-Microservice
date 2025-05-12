@@ -1,6 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
-import { Network } from "../../components/index";
-import { NetworkConfig } from "../../config/types";
+import { Network } from "@components/index";
+import { NetworkConfig } from "@config/types";
 
 export interface VpcArgs {
   /**

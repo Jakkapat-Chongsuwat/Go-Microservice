@@ -1,3 +1,5 @@
+// pulumi/src/components/internet-gateway.ts
+
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import { InternetGatewayArgs } from "./types";

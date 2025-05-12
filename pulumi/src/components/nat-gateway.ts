@@ -1,3 +1,5 @@
+// pulumi/src/components/nat-gateway.ts
+
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import { NatGatewayArgs, EipArgs } from "./types";
@@ -78,7 +80,7 @@ export class NatGateway extends pulumi.ComponentResource {
       this.elasticIp = new aws.ec2.Eip(
         `${name}-eip`,
         {
-          vpc: true, // Indicates this is for use in a VPC, like zoning the address for commercial use
+          domain: "vpc", // Indicates this is for use in a VPC, like zoning the address for commercial use
           tags: { ...args.tags, Name: `${name}-eip` }, // Label the address for identification
           ...args.elasticIpArgs, // Apply any additional configuration options
         },

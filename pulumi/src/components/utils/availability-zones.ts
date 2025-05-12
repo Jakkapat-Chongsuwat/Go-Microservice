@@ -1,3 +1,5 @@
+// pulumi/src/components/utils/availability-zones.ts
+
 import * as aws from "@pulumi/aws";
 
 /**

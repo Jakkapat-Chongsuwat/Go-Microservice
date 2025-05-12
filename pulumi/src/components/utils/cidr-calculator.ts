@@ -1,3 +1,5 @@
+// pulumi/src/components/utils/cidr-calculator.ts
+
 /**
  * CidrCalculator helps organize IP address space for network infrastructure,
  * similar to how urban planners divide land into zones and neighborhoods.

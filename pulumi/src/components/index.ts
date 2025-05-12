@@ -1,4 +1,4 @@
-// /home/top/projects/Go-Microservice/pulumi/components/index.ts
+// pulumi/components/index.ts
 
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";

@@ -1,72 +1,54 @@
 import * as pulumi from "@pulumi/pulumi";
-import { EcrRepository } from "../../components/ecr-repository";
+import { EcrRepository } from "@components/ecr-repository";
 import * as aws from "@pulumi/aws";
 
 export interface EcrRepositoryArgs {
-  /**
-   * Name of the repository
-   */
   repositoryName: string;
-
-  /**
-   * Maximum number of images to keep (for lifecycle policy)
-   */
   maxImageCount?: number;
-
-  /**
-   * Tags to apply to the repository
-   */
+  forceDelete?: boolean;
   tags?: Record<string, string>;
 }
 
-/**
- * EcrRepositoryResource manages an ECR repository for container images
- */
 export class EcrRepositoryResource {
-  /**
-   * The ECR repository
-   */
   public readonly repository: EcrRepository;
-
-  /**
-   * The repository URL
-   */
   public readonly repositoryUrl: pulumi.Output<string>;
 
-  /**
-   * Creates a new ECR repository
-   *
-   * @param name Base name for resources
-   * @param args Repository configuration
-   * @param opts Additional resource options
-   */
   constructor(
     name: string,
     args: EcrRepositoryArgs,
     opts?: pulumi.ComponentResourceOptions
   ) {
-    const lifecyclePolicy = args.maxImageCount
-      ? { maxImageCount: args.maxImageCount }
-      : undefined;
+    this.repository = this.createRepository(name, args, opts);
+    this.repositoryUrl = this.repository.repositoryUrl;
+  }
 
-    this.repository = new EcrRepository(
+  private createRepository(
+    name: string,
+    args: EcrRepositoryArgs,
+    opts?: pulumi.ComponentResourceOptions
+  ): EcrRepository {
+    return new EcrRepository(
       name,
       {
         repositoryName: args.repositoryName,
-        lifecyclePolicy: lifecyclePolicy,
+        lifecyclePolicy: this.createLifecyclePolicy(args.maxImageCount),
+        forceDelete: this.getForceDeleteValue(args.forceDelete),
         tags: args.tags,
       },
       opts
     );
-
-    this.repositoryUrl = this.repository.repositoryUrl;
   }
 
-  /**
-   * Get the ECR login password
-   *
-   * @returns A pulumi.Output with the ECR authorization token
-   */
+  private createLifecyclePolicy(
+    maxImageCount?: number
+  ): { maxImageCount?: number } | undefined {
+    return maxImageCount ? { maxImageCount } : undefined;
+  }
+
+  private getForceDeleteValue(forceDelete?: boolean): boolean {
+    return forceDelete !== undefined ? forceDelete : true;
+  }
+
   public getAuthToken(): pulumi.Output<string> {
     return pulumi.output(aws.ecr.getAuthorizationToken()).password;
   }

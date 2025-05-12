@@ -18,7 +18,6 @@ export function getAppConfig(): AppConfig {
 
   return {
     projectName: pulumi.getProject(),
-    environment: stack,
     region: getAWSRegion(),
   };
 }
