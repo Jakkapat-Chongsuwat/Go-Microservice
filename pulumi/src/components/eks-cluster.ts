@@ -1,24 +1,10 @@
+// pulumi/src/components/eks-cluster.ts
+
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import * as eks from "@pulumi/eks";
-
-export interface NodeGroupConfig {
-  name: string;
-  instanceTypes: string[];
-  desiredSize: number;
-  minSize: number;
-  maxSize: number;
-  diskSize?: number;
-  amiType?: string;
-  capacityType?: "ON_DEMAND" | "SPOT";
-  labels?: { [key: string]: string };
-  taints?: {
-    key: string;
-    value: string;
-    effect: "NO_SCHEDULE" | "PREFER_NO_SCHEDULE" | "NO_EXECUTE";
-  }[];
-  maxUnavailable?: number;
-}
+import { NodeGroupConfig } from "../config/types";
+import { NodeGroupFactory } from "@infrastructure/compute/node-groups/factory";
 
 export interface EksClusterArgs {
   vpcId: pulumi.Input<string>;
@@ -32,7 +18,11 @@ export class EksCluster extends pulumi.ComponentResource {
   public readonly cluster: eks.Cluster;
   public readonly kubeconfig: pulumi.Output<string>;
   public readonly albControllerRole: aws.iam.Role;
+  public readonly nodeRole: aws.iam.Role;
   public readonly nodeInstanceProfile: aws.iam.InstanceProfile;
+  public readonly oidcProviderUrl: pulumi.Output<string>;
+  public readonly oidcProviderArn: pulumi.Output<string>;
+  public readonly nodeGroups: eks.ManagedNodeGroup[] = [];
 
   constructor(
     name: string,
@@ -41,213 +31,171 @@ export class EksCluster extends pulumi.ComponentResource {
   ) {
     super("custom:resource:EksCluster", name, {}, opts);
 
-    this.cluster = this.createCluster(name, args);
-    this.nodeInstanceProfile = this.createNodeRole(name);
-    if (args.nodeGroups && args.nodeGroups.length > 0) {
-      this.createNodeGroups(name, args.nodeGroups, args.tags);
-    }
-    this.albControllerRole = this.createAlbControllerRole(name);
-    this.kubeconfig = this.cluster.kubeconfig.apply(
-      (kubeconfig) => kubeconfig as string
-    );
+    // Create node IAM role
+    this.nodeRole = this.createNodeRole(name);
 
-    this.registerOutputs({
-      kubeconfig: this.kubeconfig,
-      albControllerRole: this.albControllerRole,
-      clusterName: this.cluster.eksCluster.name,
-    });
-  }
-
-  private createNodeRole(name: string): aws.iam.InstanceProfile {
-    const nodeRole = new aws.iam.Role(
-      `${name}-node-role`,
-      {
-        assumeRolePolicy: JSON.stringify({
-          Version: "2012-10-17",
-          Statement: [
-            {
-              Action: "sts:AssumeRole",
-              Principal: { Service: "ec2.amazonaws.com" },
-              Effect: "Allow",
-            },
-          ],
-        }),
-      },
-      { parent: this }
-    );
-
-    const policies = [
-      { name: "AmazonEKSWorkerNodePolicy", suffix: "WorkerNodePolicy" },
-      { name: "AmazonEKS_CNI_Policy", suffix: "CNIPolicy" },
-      { name: "AmazonEC2ContainerRegistryReadOnly", suffix: "ECRReadOnly" },
-    ];
-
-    policies.forEach((policy) => {
-      new aws.iam.RolePolicyAttachment(
-        `${name}-node-${policy.suffix}`,
-        {
-          policyArn: `arn:aws:iam::aws:policy/${policy.name}`,
-          role: nodeRole.name,
-        },
-        { parent: this }
-      );
-    });
-
-    return new aws.iam.InstanceProfile(
+    // Create instance profile from the role
+    this.nodeInstanceProfile = new aws.iam.InstanceProfile(
       `${name}-node-profile`,
-      {
-        role: nodeRole.name,
-      },
+      { role: this.nodeRole.name },
       { parent: this }
     );
-  }
 
-  private createCluster(name: string, args: EksClusterArgs): eks.Cluster {
-    return new eks.Cluster(
+    // Create the EKS cluster with OIDC provider
+    this.cluster = new eks.Cluster(
       name,
       {
         vpcId: args.vpcId,
         subnetIds: args.subnetIds,
         version: args.version || "1.28",
-        instanceType: "t3.medium",
-        desiredCapacity: 2,
-        minSize: 1,
-        maxSize: 4,
-        nodePublicKey:
-          "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD3F6tyPEFEzV0LX3X8BsXdMsQz1x2cEikKDEY0aIj41qgxMCP/iteneqXSIFZBp5vizPvaoIR3Um9xK7PGoW8giupGn+EPuxIA4cDM4vzOqOkiMPhz5XK0whEjkVzTo4+S0puvDZuwIsdiW9mxhJc7tgBNL0cYlWSYVkz4G/fslNfRPW5mYAM49f4fhtxPb5ok4Q2Lg9dPKVHO/Bgeu5woMc7RY0p1ej6D4CKFE6lymSDJpW0YHX/wqE9+cfEauh7xZcG0q9t2ta6F6fmX0agvpFyZo8aFbXeUBr7osSCJNgvavWbM/06niWrOvYX2xwWdhXmXSrbX8ZbabVohBK41 email@example.com",
-        tags: {
-          ...(args.tags || {}),
-          "kubernetes.io/cluster/name": name,
-        },
-        createOidcProvider: true,
         skipDefaultNodeGroup: true,
+        createOidcProvider: true,
+        instanceRoles: [this.nodeRole],
+        tags: args.tags,
       },
       { parent: this }
     );
+
+    // Setup essential member variables
+    this.oidcProviderArn = this.cluster
+      .oidcProviderArn as pulumi.Output<string>;
+    this.oidcProviderUrl = this.getOidcProviderUrl();
+    this.kubeconfig = pulumi
+      .output(this.cluster.kubeconfig)
+      .apply((config) => config as string);
+
+    // Create node groups if specified using our factory
+    if (args.nodeGroups && args.nodeGroups.length > 0) {
+      const nodeGroupFactory = new NodeGroupFactory({
+        cluster: this.cluster,
+        nodeRole: this.nodeRole.arn,
+        baseName: name,
+        tags: args.tags,
+      });
+
+      this.nodeGroups = nodeGroupFactory.createNodeGroups(args.nodeGroups);
+    }
+
+    // Create ALB controller role
+    this.albControllerRole = this.createAlbControllerRole(name);
+
+    // Register outputs
+    this.registerOutputs({
+      kubeconfig: this.kubeconfig,
+      albControllerRole: this.albControllerRole,
+      clusterName: this.cluster.eksCluster.name,
+      oidcProviderUrl: this.oidcProviderUrl,
+      oidcProviderArn: this.oidcProviderArn,
+      nodeRole: this.nodeRole,
+      nodeGroups: this.nodeGroups,
+    });
   }
 
-  private createNodeGroups(
-    clusterName: string,
-    nodeGroups: NodeGroupConfig[],
-    tags?: { [key: string]: string }
-  ): void {
-    nodeGroups.forEach((ng) => {
-      const nodeGroupName = `${clusterName}-${ng.name}`;
-      const formattedTaints = this.formatTaints(ng.taints);
-      const updateConfig: any =
-        ng.maxUnavailable !== undefined
-          ? { maxUnavailable: ng.maxUnavailable }
-          : { maxUnavailable: 1 };
+  /**
+   * Extract the OIDC provider URL from the ARN
+   */
+  private getOidcProviderUrl(): pulumi.Output<string> {
+    return this.oidcProviderArn.apply((arn) => {
+      if (!arn) {
+        throw new Error("OIDC Provider ARN is undefined");
+      }
 
-      new eks.NodeGroupV2(
-        nodeGroupName,
+      const match = arn.match(/oidc-provider\/(.+)$/);
+      if (!match || !match[1]) {
+        throw new Error(`Failed to extract OIDC provider URL from ARN: ${arn}`);
+      }
+      return match[1];
+    });
+  }
+
+  /**
+   * Create IAM role for worker nodes
+   */
+  private createNodeRole(name: string): aws.iam.Role {
+    // Create the IAM role for node groups
+    const nodeRole = new aws.iam.Role(
+      `${name}-node-role`,
+      {
+        assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({
+          Service: "ec2.amazonaws.com",
+        }),
+      },
+      { parent: this }
+    );
+
+    // Attach required policies for EKS worker nodes
+    const requiredPolicies = [
+      "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
+      "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
+      "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
+    ];
+
+    requiredPolicies.forEach((policyArn, index) => {
+      new aws.iam.RolePolicyAttachment(
+        `${name}-node-policy-${index}`,
         {
-          cluster: this.cluster,
-          instanceTypes: ng.instanceTypes,
-          desiredCapacity: ng.desiredSize,
-          minSize: ng.minSize,
-          maxSize: ng.maxSize,
-          labels: ng.labels || {},
-          taints: formattedTaints,
-          nodeAssociatePublicIpAddress: false,
-          nodeRootVolumeSize: ng.diskSize || 20,
-          amiType: ng.amiType || "AL2_x86_64",
-          capacityType: ng.capacityType || "ON_DEMAND",
-          updateConfig: updateConfig,
-          instanceProfile: { name: this.nodeInstanceProfile.name },
-          tags: {
-            ...(tags || {}),
-            Name: nodeGroupName,
-            ManagedBy: "pulumi",
-          },
-          ...this.getSpotConfiguration(ng),
+          role: nodeRole.name,
+          policyArn,
         },
         { parent: this }
       );
     });
+
+    return nodeRole;
   }
 
-  private formatTaints(
-    taints?: { key: string; value: string; effect: string }[]
-  ): { [key: string]: { value: string; effect: string } } | undefined {
-    if (!taints) return undefined;
-
-    return taints.reduce((acc, taint) => {
-      acc[taint.key] = {
-        value: taint.value,
-        effect: taint.effect,
-      };
-      return acc;
-    }, {} as { [key: string]: { value: string; effect: string } });
-  }
-
-  private getSpotConfiguration(nodeGroup: NodeGroupConfig): any {
-    if (nodeGroup.capacityType === "SPOT") {
-      return {
-        kubeletExtraArgs: "--node-labels=node.kubernetes.io/lifecycle=spot",
-      };
-    }
-    return {};
-  }
-
+  /**
+   * Create the IAM role for AWS Load Balancer Controller
+   */
   private createAlbControllerRole(name: string): aws.iam.Role {
-    const oidcProviderUrl = this.getOidcProviderUrl();
-    const callerIdentity = aws.getCallerIdentity();
+    const accountId = aws
+      .getCallerIdentity()
+      .then((identity) => identity.accountId);
 
-    const albControllerRole = new aws.iam.Role(
+    // Create IAM role with OIDC trust relationship
+    const role = new aws.iam.Role(
       `${name}-alb-controller`,
       {
         assumeRolePolicy: pulumi
-          .all([oidcProviderUrl, callerIdentity])
-          .apply(([providerUrl, identity]) => {
-            if (!providerUrl) {
-              throw new Error("OIDC Provider URL is undefined or empty");
-            }
-
-            return JSON.stringify({
+          .all([this.oidcProviderUrl, accountId])
+          .apply(([url, account]) =>
+            JSON.stringify({
               Version: "2012-10-17",
               Statement: [
                 {
                   Effect: "Allow",
                   Principal: {
-                    Federated: `arn:aws:iam::${identity.accountId}:oidc-provider/${providerUrl}`,
+                    Federated: `arn:aws:iam::${account}:oidc-provider/${url}`,
                   },
                   Action: "sts:AssumeRoleWithWebIdentity",
                   Condition: {
                     StringEquals: {
-                      [`${providerUrl}:sub`]:
+                      [`${url}:sub`]:
                         "system:serviceaccount:kube-system:aws-load-balancer-controller",
+                      [`${url}:aud`]: "sts.amazonaws.com",
                     },
                   },
                 },
               ],
-            });
-          }),
+            })
+          ),
       },
       { parent: this }
     );
 
-    this.attachAlbControllerPolicy(name, albControllerRole);
+    // Attach the ALB controller policy
+    this.attachAlbControllerPolicy(name, role);
 
-    return albControllerRole;
+    return role;
   }
 
-  private getOidcProviderUrl(): pulumi.Output<string> {
-    return this.cluster.oidcIssuer.apply((issuer) => {
-      if (!issuer) {
-        return "";
-      }
-
-      return issuer.replace("https://", "");
-    });
-  }
-
-  private attachAlbControllerPolicy(
-    baseName: string,
-    role: aws.iam.Role
-  ): void {
+  /**
+   * Attach the AWS Load Balancer Controller policy to the role
+   */
+  private attachAlbControllerPolicy(name: string, role: aws.iam.Role): void {
+    // Create policy for ALB controller
     new aws.iam.RolePolicy(
-      `${baseName}-alb-controller-policy`,
+      `${name}-alb-policy`,
       {
         role: role.id,
         policy: JSON.stringify({
@@ -256,16 +204,19 @@ export class EksCluster extends pulumi.ComponentResource {
             {
               Effect: "Allow",
               Action: [
+                "iam:CreateServiceLinkedRole",
+                "ec2:DescribeAccountAttributes",
+                "ec2:DescribeAddresses",
+                "ec2:DescribeAvailabilityZones",
+                "ec2:DescribeInternetGateways",
                 "ec2:DescribeVpcs",
+                "ec2:DescribeSubnets",
                 "ec2:DescribeSecurityGroups",
                 "ec2:DescribeInstances",
-                "ec2:DescribeSubnets",
-                "ec2:DescribeInternetGateways",
-                "ec2:DescribeNatGateways",
-                "ec2:CreateSecurityGroup",
-                "ec2:CreateTags",
-                "ec2:AuthorizeSecurityGroupIngress",
-                "ec2:RevokeSecurityGroupIngress",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DescribeTags",
+                "ec2:GetCoipPoolUsage",
+                "ec2:DescribeCoipPools",
                 "elasticloadbalancing:DescribeLoadBalancers",
                 "elasticloadbalancing:DescribeLoadBalancerAttributes",
                 "elasticloadbalancing:DescribeListeners",
@@ -276,28 +227,47 @@ export class EksCluster extends pulumi.ComponentResource {
                 "elasticloadbalancing:DescribeTargetGroupAttributes",
                 "elasticloadbalancing:DescribeTargetHealth",
                 "elasticloadbalancing:DescribeTags",
-                "elasticloadbalancing:CreateListener",
+                "wafv2:GetWebACL",
+                "wafv2:GetWebACLForResource",
+                "shield:GetSubscriptionState",
+                "shield:DescribeProtection",
+                "shield:CreateProtection",
+                "shield:DeleteProtection",
+              ],
+              Resource: "*",
+            },
+            {
+              Effect: "Allow",
+              Action: [
+                "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:RevokeSecurityGroupIngress",
+                "ec2:CreateSecurityGroup",
+                "ec2:CreateTags",
+                "ec2:DeleteTags",
+                "ec2:ModifyVpcAttribute",
+                "ec2:CreateNetworkInterface",
+                "ec2:DeleteNetworkInterface",
                 "elasticloadbalancing:CreateLoadBalancer",
-                "elasticloadbalancing:CreateRule",
                 "elasticloadbalancing:CreateTargetGroup",
-                "elasticloadbalancing:ModifyListener",
+                "elasticloadbalancing:CreateRule",
+                "elasticloadbalancing:CreateListener",
+                "elasticloadbalancing:DeleteListener",
+                "elasticloadbalancing:DeleteRule",
+                "elasticloadbalancing:DeleteTargetGroup",
+                "elasticloadbalancing:DeleteLoadBalancer",
                 "elasticloadbalancing:ModifyLoadBalancerAttributes",
-                "elasticloadbalancing:ModifyRule",
+                "elasticloadbalancing:SetIpAddressType",
+                "elasticloadbalancing:SetSecurityGroups",
+                "elasticloadbalancing:SetSubnets",
+                "elasticloadbalancing:AddTags",
+                "elasticloadbalancing:RemoveTags",
                 "elasticloadbalancing:ModifyTargetGroup",
                 "elasticloadbalancing:ModifyTargetGroupAttributes",
                 "elasticloadbalancing:RegisterTargets",
                 "elasticloadbalancing:DeregisterTargets",
-                "elasticloadbalancing:SetIpAddressType",
-                "elasticloadbalancing:SetSecurityGroups",
-                "elasticloadbalancing:SetSubnets",
-                "elasticloadbalancing:DeleteLoadBalancer",
-                "elasticloadbalancing:DeleteTargetGroup",
-                "elasticloadbalancing:DeleteListener",
-                "elasticloadbalancing:DeleteRule",
-                "elasticloadbalancing:AddTags",
-                "elasticloadbalancing:RemoveTags",
-                "wafv2:GetWebACL",
-                "wafv2:GetWebACLForResource",
+                "elasticloadbalancing:AddListenerCertificates",
+                "elasticloadbalancing:RemoveListenerCertificates",
+                "elasticloadbalancing:ModifyRule",
                 "wafv2:AssociateWebACL",
                 "wafv2:DisassociateWebACL",
               ],

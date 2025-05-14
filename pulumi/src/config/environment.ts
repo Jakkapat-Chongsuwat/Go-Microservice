@@ -72,12 +72,11 @@ function getAWSRegion(): string {
 export function getNetworkConfig(): NetworkConfig {
   return {
     vpcCidrBlock: "10.0.0.0/16",
-    availabilityZones: ["a", "b", "c"],
+    availabilityZones: [],
     createPrivateSubnets: true,
     createPublicSubnets: true,
   };
 }
-
 /**
  * Get environment-specific node groups configuration
  *

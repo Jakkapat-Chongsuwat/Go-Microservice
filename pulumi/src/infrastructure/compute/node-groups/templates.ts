@@ -1,12 +1,9 @@
-// pulumi/src/infrastructure/compute/node-groups.ts
+// pulumi/src/infrastructure/compute/node-groups/templates.ts
 
 import { NodeGroupConfig } from "@config/types";
 
 /**
  * Creates standard node groups based on environment
- *
- * @param environment The deployment environment
- * @returns Array of node group configurations
  */
 export function createStandardNodeGroups(
   environment: string
@@ -42,9 +39,6 @@ export function createStandardNodeGroups(
 
 /**
  * Creates a spot instance node group
- *
- * @param environment The deployment environment
- * @returns Spot instance node group configuration
  */
 export function createSpotNodeGroup(environment: string): NodeGroupConfig {
   const isProd = environment === "production";
@@ -71,9 +65,6 @@ export function createSpotNodeGroup(environment: string): NodeGroupConfig {
 
 /**
  * Creates node groups for the given environment
- *
- * @param environment The deployment environment
- * @returns Array of node group configurations
  */
 export function createNodeGroups(environment: string): NodeGroupConfig[] {
   return [

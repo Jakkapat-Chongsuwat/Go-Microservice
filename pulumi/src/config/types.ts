@@ -53,24 +53,9 @@ export interface DatabaseConfig {
  * Network configuration
  */
 export interface NetworkConfig {
-  /**
-   * VPC CIDR block
-   */
   vpcCidrBlock: string;
-
-  /**
-   * Availability zone suffixes
-   */
-  availabilityZones: string[];
-
-  /**
-   * Whether to create private subnets
-   */
+  availabilityZones: pulumi.Input<pulumi.Input<string>[]>;
   createPrivateSubnets: boolean;
-
-  /**
-   * Whether to create public subnets
-   */
   createPublicSubnets: boolean;
 }
 

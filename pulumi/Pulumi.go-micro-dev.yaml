@@ -1,4 +1,0 @@
-config:
-  aws:region: ap-southeast-1
-  Go-Microservices:dbPassword:
-    secure: AAABAC/gPwS3Cr8X5IbcCzLZ/3FlBpp9GgFBx+y9T8PuESmX7YXO

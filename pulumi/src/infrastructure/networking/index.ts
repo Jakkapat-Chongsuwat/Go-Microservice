@@ -13,8 +13,7 @@ export interface NetworkStackArgs {
   /**
    * Availability zones to deploy into
    */
-  availabilityZones: string[];
-
+  availabilityZones: pulumi.Input<pulumi.Input<string>[]>;
   /**
    * Tags to apply to resources
    */

@@ -21,6 +21,7 @@ import { createResourceTags } from "@utils/tagging";
 
 // Import types
 import { ChartValues } from "@components/types";
+import * as aws from "@pulumi/aws";
 
 /**
  * InfrastructureDeployer - Orchestrates the deployment of cloud infrastructure
@@ -64,14 +65,17 @@ export class InfrastructureDeployer {
   public deployNetworking(): void {
     const networkConfig = getNetworkConfig();
 
-    // Create VPC and networking components
+    const azs = pulumi
+      .output(aws.getAvailabilityZones({ state: "available" }))
+      .apply((z) => z.names);
+
     this.network = new NetworkStack("network", {
       cidrBlock: networkConfig.vpcCidrBlock,
-      availabilityZones: networkConfig.availabilityZones,
+      availabilityZones: azs,
       tags: this.tags,
     });
 
-    console.log("Network infrastructure deployed");
+    console.log("Network infrastructure deployed in AZs:", azs);
   }
 
   /**
@@ -241,7 +245,7 @@ function deployInfrastructure(): void {
   try {
     // Deploy networking layer
     deployer.deployNetworking();
-    deployer.deployCompute();
+    // deployer.deployCompute();
     // deployer.deployStorage();
     // deployer.deployUserService();
 
