@@ -213,19 +213,14 @@ export class HelmChart extends pulumi.ComponentResource {
         version: args.version,
         namespace: args.namespace,
         values: combinedValues,
-        // Use fetchOpts for OCI repository authentication
         fetchOpts: fetchOpts,
-        // Apply transformations to resources if provided
         transformations: args.transformations,
-        // These match the properties available in Pulumi Kubernetes Helm v3 Chart
         skipAwait: args.skipAwait,
         includeTestHookResources: args.includeTestHookResources,
         skipCRDRendering: args.skipCRDRendering,
       },
       {
         parent: this,
-        // Make sure we wait for the namespace to be created before deploying
-        // Like ensuring the district exists before starting construction
         dependsOn: this.namespace ? [this.namespace] : undefined,
         ...opts,
       }

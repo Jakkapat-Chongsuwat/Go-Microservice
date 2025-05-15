@@ -229,7 +229,7 @@ export class InfrastructureDeployer {
       return values;
     } catch (error) {
       console.error(`Error loading chart values: ${error}`);
-      return {}; // Return empty object if values can't be loaded
+      return {};
     }
   }
 }
@@ -238,7 +238,6 @@ export class InfrastructureDeployer {
  * Deploy infrastructure in the correct sequence
  */
 function deployInfrastructure(): void {
-  // Create infrastructure deployer
   const deployer = new InfrastructureDeployer("dev");
   console.log("Starting infrastructure deployment...");
 
@@ -249,15 +248,13 @@ function deployInfrastructure(): void {
     // deployer.deployStorage();
     // deployer.deployUserService();
 
-    // Register outputs for whatever components were deployed
     deployer.registerOutputs();
 
     console.log("Infrastructure deployment completed successfully");
   } catch (error) {
     console.error(`Error during infrastructure deployment: ${error}`);
-    throw error; // Re-throw to ensure Pulumi knows deployment failed
+    throw error;
   }
-}
 
-// Run the deployment
-deployInfrastructure();
+  deployInfrastructure();
+}
