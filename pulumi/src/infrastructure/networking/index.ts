@@ -1,80 +1,60 @@
+// src/infrastructure/networking/index.ts
+
 import * as pulumi from "@pulumi/pulumi";
-import { Vpc } from "./vpc";
-import { NetworkConfig } from "@config/types";
-import { createResourceTags } from "@utils/tagging";
 import { createComponentName } from "@utils/naming";
+import { Network } from "@components/index";
+import { NetworkArgs } from "@components/types";
 
 export interface NetworkStackArgs {
-  /**
-   * VPC CIDR block
-   */
+  /** Full CIDR for the VPC */
   cidrBlock: string;
 
-  /**
-   * Availability zones to deploy into
-   */
-  availabilityZones: pulumi.Input<pulumi.Input<string>[]>;
-  /**
-   * Tags to apply to resources
-   */
+  /** AZs can now be an Output<string[]> */
+  availabilityZones: pulumi.Input<string[]>;
+
+  /** Whether to create private subnets */
+  createPrivateSubnets?: boolean;
+
+  /** Whether to create public subnets */
+  createPublicSubnets?: boolean;
+
+  /** Arbitrary plain tags */
   tags?: Record<string, string>;
 }
 
-/**
- * NetworkStack creates all networking resources
- */
-export class NetworkStack {
-  /**
-   * The VPC resource
-   */
-  public readonly vpc: Vpc;
-
-  /**
-   * The VPC ID
-   */
+export class NetworkStack extends pulumi.ComponentResource {
+  public readonly network: Network;
   public readonly vpcId: pulumi.Output<string>;
-
-  /**
-   * Private subnet IDs
-   */
   public readonly privateSubnetIds: pulumi.Output<string>[];
-
-  /**
-   * Public subnet IDs
-   */
   public readonly publicSubnetIds: pulumi.Output<string>[];
 
-  /**
-   * Creates a new network stack
-   *
-   * @param name Base name for resources
-   * @param args Network configuration arguments
-   * @param opts Additional resource options
-   */
   constructor(
     name: string,
-    args: NetworkStackArgs,
+    args: NetworkStackArgs, // ← note Input<string[]> here
     opts?: pulumi.ComponentResourceOptions
   ) {
-    this.vpc = new Vpc(
-      createComponentName(name, "vpc"),
+    super("pkg:networking:NetworkStack", name, {}, opts);
+
+    this.network = new Network(
+      createComponentName(name, "network"),
       {
-        config: {
-          vpcCidrBlock: args.cidrBlock,
-          availabilityZones: args.availabilityZones,
-          createPrivateSubnets: true,
-          createPublicSubnets: true,
-        },
+        vpcCidrBlock: args.cidrBlock,
+        availabilityZones: args.availabilityZones,
+        createPrivateSubnets: args.createPrivateSubnets ?? true,
+        createPublicSubnets: args.createPublicSubnets ?? true,
         tags: args.tags,
-      },
-      opts
+      } as NetworkArgs,
+      { parent: this }
     );
 
-    // Export the network resources
-    this.vpcId = this.vpc.vpcId;
-    this.privateSubnetIds = this.vpc.privateSubnetIds;
-    this.publicSubnetIds = this.vpc.publicSubnetIds;
+    this.vpcId = this.network.vpc.id;
+    this.privateSubnetIds = this.network.privateSubnetIds;
+    this.publicSubnetIds = this.network.publicSubnetIds;
+
+    this.registerOutputs({
+      vpcId: this.vpcId,
+      privateSubnetIds: this.privateSubnetIds,
+      publicSubnetIds: this.publicSubnetIds,
+    });
   }
 }
-
-export { Vpc };

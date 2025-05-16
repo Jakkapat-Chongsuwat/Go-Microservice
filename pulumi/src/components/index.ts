@@ -1,17 +1,17 @@
-// pulumi/components/index.ts
-
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
+
 import { Vpc } from "./vpc";
 import { InternetGateway } from "./internet-gateway";
 import { RouteTable } from "./route-table";
 import { Subnet } from "./subnet";
 import { NatGateway } from "./nat-gateway";
-import { CidrCalculator } from "@components/utils/cidr-calculator";
-import { AvailabilityZoneUtils } from "@components/utils/availability-zones";
-import { NetworkArgs } from "@types";
+import { CidrCalculator } from "./utils/cidr-calculator";
+import { AvailabilityZoneUtils } from "./utils/availability-zones";
 
-// Export all component types and classes
+import { NetworkArgs } from "./types";
+
+// Re-export everything:
 export * from "./types";
 export * from "./vpc";
 export * from "./internet-gateway";
@@ -39,49 +39,38 @@ export class Network extends pulumi.ComponentResource {
   ) {
     super("custom:resource:Network", name, {}, opts);
 
-    // Get availability zones
-    const azSuffixes = AvailabilityZoneUtils.getAvailabilityZoneSuffixes(
-      args.availabilityZones
+    // availabilityZones is still a plain string[]
+    const azs = AvailabilityZoneUtils.getAvailabilityZoneSuffixes(
+      args.availabilityZones ?? []
     );
-    const azCount = azSuffixes.length;
+    const azCount = azs.length;
 
     // Create the VPC
-    const vpcComponent = new Vpc(
+    const vpcComp = new Vpc(
       `${name}-vpc`,
-      {
-        cidrBlock: args.vpcCidrBlock,
-        tags: args.tags,
-      },
+      { cidrBlock: args.vpcCidrBlock, tags: args.tags },
       { parent: this }
     );
-    this.vpc = vpcComponent.vpc;
+    this.vpc = vpcComp.vpc;
 
-    // Create Internet Gateway if public subnets are enabled
-    if (args.createPublicSubnets !== false) {
-      const igwComponent = new InternetGateway(
+    // Internet Gateway + public RT
+    if (args.createPublicSubnets ?? true) {
+      const igwComp = new InternetGateway(
         `${name}-igw`,
-        {
-          vpcId: this.vpc.id,
-          tags: args.tags,
-        },
+        { vpcId: this.vpc.id, tags: args.tags },
         { parent: this }
       );
-      this.internetGateway = igwComponent.gateway;
+      this.internetGateway = igwComp.gateway;
 
-      // Create public route table
-      const publicRouteTableComponent = new RouteTable(
+      const prtComp = new RouteTable(
         `${name}-public-rt`,
-        {
-          vpcId: this.vpc.id,
-          tags: args.tags,
-        },
+        { vpcId: this.vpc.id, tags: args.tags },
         { parent: this }
       );
-      this.publicRouteTable = publicRouteTableComponent.routeTable;
+      this.publicRouteTable = prtComp.routeTable;
 
-      // Add route to internet - fixed null check
-      if (this.publicRouteTable && this.internetGateway) {
-        publicRouteTableComponent.addRoute(`${name}-public-route`, {
+      if (this.internetGateway && this.publicRouteTable) {
+        prtComp.addRoute(`${name}-public-route`, {
           routeTableId: this.publicRouteTable.id,
           destinationCidrBlock: "0.0.0.0/0",
           gatewayId: this.internetGateway.id,
@@ -89,39 +78,38 @@ export class Network extends pulumi.ComponentResource {
       }
     }
 
-    // Create private route tables for each AZ if private subnets are enabled
-    if (args.createPrivateSubnets !== false) {
+    // Private RTs
+    if (args.createPrivateSubnets ?? true) {
       for (let i = 0; i < azCount; i++) {
-        const privateRouteTableComponent = new RouteTable(
+        const prt = new RouteTable(
           `${name}-private-rt-${i}`,
           {
             vpcId: this.vpc.id,
-            tags: { ...args.tags, Name: `${name}-private-rt-${i}` },
+            tags: { ...(args.tags ?? {}), Name: `${name}-private-rt-${i}` },
           },
           { parent: this }
         );
-        this.privateRouteTables.push(privateRouteTableComponent.routeTable);
+        this.privateRouteTables.push(prt.routeTable);
       }
     }
 
-    // Create subnets
+    // Subnets & NAT Gateways
     for (let i = 0; i < azCount; i++) {
-      const az = azSuffixes[i];
-      const azName = `${aws.config.region}${az}`;
+      const suffix = azs[i];
+      const azName = `${aws.config.region}${suffix}`;
 
-      // Create public subnets if enabled
-      if (args.createPublicSubnets !== false) {
-        const publicCidr = CidrCalculator.calculateSubnetCidr(
+      // Public subnet
+      if (args.createPublicSubnets ?? true) {
+        const pubCidr = CidrCalculator.calculateSubnetCidr(
           args.vpcCidrBlock,
           i,
           azCount
         );
-
-        const publicSubnetComponent = new Subnet(
+        const pub = new Subnet(
           `${name}-public-${i}`,
           {
             vpcId: this.vpc.id,
-            cidrBlock: publicCidr,
+            cidrBlock: pubCidr,
             availabilityZone: azName,
             mapPublicIpOnLaunch: true,
             type: "public",
@@ -129,83 +117,73 @@ export class Network extends pulumi.ComponentResource {
           },
           { parent: this }
         );
+        this.publicSubnets.push(pub.subnet);
+        this.publicSubnetIds.push(pub.subnet.id);
 
-        const publicSubnet = publicSubnetComponent.subnet;
-        this.publicSubnets.push(publicSubnet);
-        this.publicSubnetIds.push(publicSubnet.id);
-
-        // Associate with public route table
         if (this.publicRouteTable) {
           new aws.ec2.RouteTableAssociation(
             `${name}-public-rta-${i}`,
             {
-              subnetId: publicSubnet.id,
+              subnetId: pub.subnet.id,
               routeTableId: this.publicRouteTable.id,
             },
             { parent: this }
           );
         }
 
-        // Create NAT Gateway in public subnet if private subnets are enabled
-        if (args.createPrivateSubnets !== false) {
-          const natGatewayComponent = new NatGateway(
+        // NAT for private subnets
+        if (args.createPrivateSubnets ?? true) {
+          const ng = new NatGateway(
             `${name}-nat-${i}`,
             {
-              subnetId: publicSubnet.id,
+              subnetId: pub.subnet.id,
               createElasticIp: true,
               tags: args.tags,
-            } as any,
+            },
             { parent: this }
-          ); // Using 'any' due to parameter incompatibility
-
-          const natGateway = natGatewayComponent.natGateway;
-          this.natGateways.push(natGateway);
+          );
+          this.natGateways.push(ng.natGateway);
         }
       }
 
-      // Create private subnets if enabled
-      if (args.createPrivateSubnets !== false) {
-        const privateCidr = CidrCalculator.calculateSubnetCidr(
+      // Private subnet
+      if (args.createPrivateSubnets ?? true) {
+        const privCidr = CidrCalculator.calculateSubnetCidr(
           args.vpcCidrBlock,
           i + azCount,
           azCount
         );
-
-        const privateSubnetComponent = new Subnet(
+        const priv = new Subnet(
           `${name}-private-${i}`,
           {
             vpcId: this.vpc.id,
-            cidrBlock: privateCidr,
+            cidrBlock: privCidr,
             availabilityZone: azName,
             type: "private",
             tags: args.tags,
           },
           { parent: this }
         );
+        this.privateSubnets.push(priv.subnet);
+        this.privateSubnetIds.push(priv.subnet.id);
 
-        const privateSubnet = privateSubnetComponent.subnet;
-        this.privateSubnets.push(privateSubnet);
-        this.privateSubnetIds.push(privateSubnet.id);
-
-        // Associate with private route table
-        if (this.privateRouteTables[i]) {
+        const prt = this.privateRouteTables[i];
+        if (prt) {
           new aws.ec2.RouteTableAssociation(
             `${name}-private-rta-${i}`,
             {
-              subnetId: privateSubnet.id,
-              routeTableId: this.privateRouteTables[i].id,
+              subnetId: priv.subnet.id,
+              routeTableId: prt.id,
             },
             { parent: this }
           );
-
-          // Add route to NAT gateway if public subnets are enabled
-          if (args.createPublicSubnets !== false && this.natGateways[i]) {
+          if (args.createPublicSubnets ?? true) {
             new aws.ec2.Route(
               `${name}-private-route-${i}`,
               {
-                routeTableId: this.privateRouteTables[i].id,
+                routeTableId: prt.id,
                 destinationCidrBlock: "0.0.0.0/0",
-                natGatewayId: this.natGateways[i].id,
+                natGatewayId: this.natGateways[i]?.id,
               },
               { parent: this }
             );

@@ -1,70 +1,58 @@
+// src/infrastructure/networking/vpc.ts
+
 import * as pulumi from "@pulumi/pulumi";
 import { Network } from "@components/index";
-import { NetworkConfig } from "@config/types";
+import { NetworkArgs } from "@components/types";
 
-export interface VpcArgs {
-  /**
-   * Configuration for the network
-   */
-  config: NetworkConfig;
-
-  /**
-   * Tags to apply to resources
-   */
-  tags?: Record<string, string>;
+/** Mirror your stack config shape */
+export interface NetworkConfig {
+  vpcCidrBlock: string;
+  availabilityZones?: string[];
+  createPrivateSubnets?: boolean;
+  createPublicSubnets?: boolean;
 }
 
-/**
- * VPC creates and manages a VPC and its associated resources
- */
-export class Vpc {
-  /**
-   * The Network component that manages the VPC
-   */
+export class VpcInfra extends pulumi.ComponentResource {
   public readonly network: Network;
-
-  /**
-   * The VPC ID
-   */
   public readonly vpcId: pulumi.Output<string>;
-
-  /**
-   * Private subnet IDs
-   */
   public readonly privateSubnetIds: pulumi.Output<string>[];
-
-  /**
-   * Public subnet IDs
-   */
   public readonly publicSubnetIds: pulumi.Output<string>[];
 
-  /**
-   * Creates a new VPC infrastructure
-   *
-   * @param name The resource name
-   * @param args The VPC arguments
-   * @param opts Additional resource options
-   */
-  constructor(
-    name: string,
-    args: VpcArgs,
-    opts?: pulumi.ComponentResourceOptions
-  ) {
-    // Create the network component
+  constructor(name: string, opts?: pulumi.ComponentResourceOptions) {
+    // Load JSON/YAML under “network.config” in your Pulumi.<stack>.yaml
+    const cfg = new pulumi.Config("network");
+    const netCfg = cfg.requireObject<NetworkConfig>("config");
+
+    super("custom:resource:VpcInfra", name, {}, opts);
+
+    // Defaults
+    const azs = netCfg.availabilityZones ?? [];
+    const createP = netCfg.createPublicSubnets ?? true;
+    const createR = netCfg.createPrivateSubnets ?? true;
+
+    // Instantiate the Network component with plain values only
     this.network = new Network(
       name,
       {
-        vpcCidrBlock: args.config.vpcCidrBlock,
-        availabilityZones: args.config.availabilityZones,
-        createPrivateSubnets: args.config.createPrivateSubnets,
-        createPublicSubnets: args.config.createPublicSubnets,
-        tags: args.tags,
-      },
-      opts
+        vpcCidrBlock: netCfg.vpcCidrBlock,
+        availabilityZones: azs,
+        createPrivateSubnets: createR,
+        createPublicSubnets: createP,
+        tags: { Environment: pulumi.getStack() },
+      } as NetworkArgs,
+      { parent: this }
     );
 
     this.vpcId = this.network.vpc.id;
     this.privateSubnetIds = this.network.privateSubnetIds;
     this.publicSubnetIds = this.network.publicSubnetIds;
+
+    this.registerOutputs({
+      vpcId: this.vpcId,
+      privateSubnetIds: this.privateSubnetIds,
+      publicSubnetIds: this.publicSubnetIds,
+    });
   }
 }
+
+export default VpcInfra;

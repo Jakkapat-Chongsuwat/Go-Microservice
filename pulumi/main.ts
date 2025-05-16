@@ -63,19 +63,22 @@ export class InfrastructureDeployer {
    * Deploy networking infrastructure (VPC, subnets, etc.)
    */
   public deployNetworking(): void {
-    const networkConfig = getNetworkConfig();
+    const netCfg = getNetworkConfig();
 
+    // `aws.getAvailabilityZones()` returns a Promise, so wrap in pulumi.output
     const azs = pulumi
       .output(aws.getAvailabilityZones({ state: "available" }))
       .apply((z) => z.names);
 
     this.network = new NetworkStack("network", {
-      cidrBlock: networkConfig.vpcCidrBlock,
+      cidrBlock: netCfg.vpcCidrBlock,
       availabilityZones: azs,
+      createPrivateSubnets: netCfg.createPrivateSubnets,
+      createPublicSubnets: netCfg.createPublicSubnets,
       tags: this.tags,
     });
 
-    console.log("Network infrastructure deployed in AZs:", azs);
+    pulumi.log.info("Network deployed in AZs: " + azs);
   }
 
   /**
@@ -137,7 +140,7 @@ export class InfrastructureDeployer {
       dbPassword: dbPassword,
       region: this.region,
       tags: this.tags,
-      preloadedValues: userServiceValues, // Pass pre-loaded chart values
+      preloadedValues: userServiceValues,
     });
 
     console.log("User service deployed");
@@ -255,6 +258,6 @@ function deployInfrastructure(): void {
     console.error(`Error during infrastructure deployment: ${error}`);
     throw error;
   }
-
-  deployInfrastructure();
 }
+
+deployInfrastructure();
